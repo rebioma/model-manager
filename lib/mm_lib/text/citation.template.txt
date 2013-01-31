@@ -1,0 +1,42 @@
+Occurrence data and distribution models for zzz
+created by REBIOMA at http://data.rebioma.net on zzz
+
+Total occurrence records in models: zzz
+Total private records in models: zzz
+Private data owner email(s): zzz
+
+All public occurrence data used to create models saved to file named:
+zzz
+
+Recommended citation:
+Réseau de la Biodiversité de Madagascar (REBIOMA). zzz.
+Species occurrence data and species distribution models [Data file].
+REBIOMA data portal (http://data.rebioma.net). Retrieved zzz
+
+There may be additional records for this species on the web portal; we use only
+non-duplicate records (by location and era) to construct distribution models.
+For additional information on the modeling methodology, see
+http://sites.google.com/site/rebiomahelp/home/english#modelspec
+
+Public occurrence data provided by institutions and data providers listed in the occurrence
+fields named "InstitutionCode" and "OwnerEmail", where provided for a given record.
+Data reviewed by reviewer(s) listed in the "reviewers" field.
+
+For a complete list of the members of the Taxonomic Review Board see:
+https://docs.google.com/document/d/1OzA1jrUqUhDQk4ugnf0H660gZzcK8JvotKOK0Dvk0QY/edit?hl=en_US
+
+By downloading and/or viewing data on the REBIOMA portal, you are agreeing to the
+following conditions:
+* Species occurrence records and models served by REBIOMA are to be utilized by individual
+  researchers or research groups for scholarly, educational or research purposes only and
+  not for any commercial purpose.
+* If any records or models derived from these records are used in an analysis, report, 
+  presentation, etc., the provenance of the original data must be acknowledged and the
+  data-provider or the curatorial staff of specific institutions should be notified.
+  Please also notify the REBIOMA project: ucb_rebioma@gmail.com
+* The data-providers, institutions, REBIOMA, and their staff supply this data with no 
+  warranties, express or implied, concerning its fitness for any particular purpose, and
+  are not responsible for damages, injury or loss due to the use of these data or models.
+* Recipients of data or models from the REBIOMA portal shall be solely responsible for the
+  use and presentation of the data and will ensure that the use and presentation of the
+  data are correct and that the data are accurately reproduced and not taken out of context.

@@ -1,0 +1,106 @@
+## YAML with some basic properties for use in project
+#
+
+## General properties
+# global_run: this will delete existing model records in database (in rebioma_mm database only) 
+# see below for deleting models on tomcat
+# use replace_ascii_db to copy this table to rebioma_prod
+global_run: true
+# marine: run marine models, in addition to terrestrial
+marine: true
+
+## Database properties
+# replace_db: makes a copy of rebioma_prod and changes table and field names to work with ActiveRecord
+# replace_ascii_db: copies the database table that stores names and html for each model from _mm to _prod (table: asc_model)
+replace_db: false
+replace_ascii_db: true
+
+## Mask and background properties
+# read and write mask to ascii: this is a convenience and can save time if nothing else changes
+mask_write: true
+mask_read: false
+mask_path: "/home/tomay/mm/masks/"  
+mask_file: "mask_2013-01-30_20:24:48_-0800.asc"
+years_file: "years_2013-01-30_20:24:49_-0800.csv"
+read_marine_ascii_mask_location: "/home/rebioma/mm/training/mask/marine_mask.asc"
+#write_mask_path: "/home/rebioma/mm/mask/"
+use_existing_background:
+  value: false
+  file1: "/home/rebioma/mm/training/background_climate_only_swd.csv"
+  file2: "/home/rebioma/mm/training/background_climate_forest_swd.csv"
+  marine_file: "/home/rebioma/mm/training/background_marine.swd"
+
+## Storage path properties
+logs: "/home/tomay/rails/model-manager/lib/mm_lib/log/"
+env_path: "/home/rebioma/Storage_path/"
+taxonomic_authority_path: "/home/tomay/mm/taxonomy_edit.csv" # because of encoding issues deleted all extra cols
+link_path: "/home/rebioma/mm/ascii_links/"
+trainingdir: "/home/rebioma/mm/training/"
+#Final location for output from model_manager; see below for tomcat path
+outputdir: "/home/rebioma/mm/output/" 
+
+## Post-procesing properties to change ownership and move results
+chown: true
+owner_uid: 1000
+owner_uid2: 1001
+#final location on tomcat
+models_path: "/home/tomcat/tomcat6/webapps/test/ModelOutput/"
+#if true copy (as symbolic links) files to final location specified above
+move_to_tomcat: true
+links: true
+# if true delete existing models on tomcat. Note: only runs if move_to_tomcat == true 
+delete_old_tomcat: true
+
+## Test properties
+# Mask run types for testing:
+# 0 = Regular full mask, 1 = smaller mask, 2 = very small test mask
+mask_run_type: 0
+# Record run types for testing:
+# 0 = Regular full run with reviewed => true, 1 = valid => true, 2 = single species
+records_run_type: 0
+
+## Modeling properties
+maxent_path: "/home/rebioma/mm/maxent/maxent3.3.3e.jar"
+minrecs: 8
+background_samples: 10000
+replicates:
+  sample_threshold: 20
+  reps_above: 10
+  reps_below: 4
+memory_arg: "-mx2048m"
+# how many threads to run Maxent, depends on cpu
+threads_arg: 4 
+extrapolate: false
+
+## Ascii grid properties
+terr_grid:
+  ncols: 879
+  nrows: 1648
+  xll: 43.183344973251
+  yll: -25.64166487474
+  cell: 0.0083333337679505
+  headlines: 6
+marine_grid:
+  ncols: 294
+  nrows: 421
+  xll: 40.324999983333
+  yll: -28.97
+  cell: 0.045
+  headlines: 6
+
+## Model scenario properties
+climate_scenarios: "1950_climate_only,2000_climate_only,2080_climate_only"
+forest_scenarios: "1950_climate_forest,2000_climate_forest,2080a_climate_forest,2080b_climate_forest"
+scen_name1: "climate_only"
+scen_name2: "climate_forest"
+forest_eras: "1950,1970,1990,2000"
+clim_era_layers:
+  1950: "mintemp_50.asc,realmar_50.asc,wbpos_50.asc,etptotal_50.asc,maxtemp_50.asc,realmat_50.asc,wbyear_50.asc,minprec_50.asc,maxprec_50.asc"
+  2000: "mintemp_00.asc,realmar_00.asc,wbpos_00.asc,etptotal_00.asc,maxtemp_00.asc,realmat_00.asc,wbyear_00.asc,minprec_00.asc,maxprec_00.asc"
+  future: "mintemp_2X.asc,realmar_2X.asc,wbpos_2x.asc,etptotal_2X.asc,maxtemp_2X.asc,minprec_2X.asc,realmat_2X.asc,wbyear_2X.asc,maxprec_2X.asc"
+for_era_layers:
+  1950: "pfc1950.asc"
+  1970: "pfc1970.asc"
+  1990: "pfc1990.asc"
+  2000: "pfc2000.asc"
+marine_layers: "bnt_ird5k.asc,chl_5k.asc,cv_5k.asc,par_5k.asc,reef_perc5k.asc,sal_5k.asc,sst_5k.asc,tide_5k.asc,topex5k_mar.asc,uv_5k.asc,wind_5k.asc"
