@@ -170,8 +170,6 @@ names.each_with_index {|species,z|
   occ_raw_public = Occurrence.where(:reviewed => true).where("AcceptedSpecies = '#{species.AcceptedSpecies}'").where(:Public => true)
   # Second query to get positively reviewed private records that are "vettable" i.e. modelable
   occ_raw_private = Occurrence.where(:reviewed => true).where("AcceptedSpecies = '#{species.AcceptedSpecies}'").where(:Public => false).where(:Vettable => true)
-  #occ_array_pub = occ_raw_public.to_a
-  #occ_array_priv = occ_raw_private.to_a
   # Join the two result set arrays with simple '+', there is no overlap. results in array, not AR relation 
   occ_array = occ_raw_public + occ_raw_private
 
@@ -234,6 +232,7 @@ names.each_with_index {|species,z|
 # Progress report
 #
 ##
+GeneralUtilities.puts_log("\n",log)
 GeneralUtilities.puts_log("Potential n modelable spp before removing grid duplicates: " + names_size.to_s,log)
 GeneralUtilities.puts_log("Final n modelable spp after removing grid duplicates: " + final_spp.size.to_s,log)
 if final_spp.size == 0
@@ -245,15 +244,13 @@ for i in (0..final_spp.size - 1) do
   GeneralUtilities.puts_log(final_spp[i][0][2].AcceptedSpecies + " (" + final_spp[i].size.to_s + ")",log)
 end
 
-Process.exit
-
 #
 # STEP 6:
 # Create one terr and one marine background SWD for use in all MaxEnt runs in this session
 # TO DO: Need marine background SWD also? Yes but simple derivation, random within entire area
 ##
-msg = "Creating background SWDs..."; puts msg; log.info msg
-if props['use_existing_background']['value'] == false
+GeneralUtilities.puts_log("Creating background SWDs...",log)
+if props['use_existing_background']['value'] == false # create new background
   msg = "Creating background SWDs for climate, climate/forest and marine scenarios..."; puts msg; log.info msg
   backfiles = ModelUtilities.create_background_swd(years, mask)
   mar_backfile = true # allows no marine models 
@@ -261,18 +258,21 @@ if props['use_existing_background']['value'] == false
     mar_backfile = ModelUtilities.create_marine_background_swd(marine_mask)
   end
   if (backfiles and mar_backfile)
-    msg = "\nBackground SWDs ok: true"; puts msg; log.info msg
+    GeneralUtilities.puts_log("\nBackground SWDs ok: true",log)
   else
     msg = "Error creating background swd's"
     abort(msg); log.error msg
   end
 else # use existing background files named in properties.yml
-  msg = "Using existing background SWDs from previous run..."; puts msg; log.info msg
+  GeneralUtilities.puts_log("Using existing background SWDs from previous run...",log)
   backfiles = []
   backfiles << props['use_existing_background']['file1'] #string points to csv file, name assumed to match props['scen1'] below
   backfiles << props['use_existing_background']['file2'] #string points to csv file, assumed to match props['scen2'] below
   mar_backfile = props['use_existing_background']['marine_file'] if props['marine'] == true # string points to marine background swd file
 end
+
+Process.exit
+
 
 #
 # STEP 6b:
@@ -285,7 +285,7 @@ AscModel.delete_all if props['global_run'] # deletes all existing records in Asc
 #
 # STEP 7:
 # Create sample SWDs for each species, add these file locations to list
-# TO DO: this is start of long model loop for each species
+# note:  this is start of long model loop for each species
 #        the reasoning here is that other methods that deal with all spp at once
 #        require huge arrays of occurrences, etc., will not scale to 10000's spp
 ##
