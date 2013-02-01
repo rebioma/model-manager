@@ -7,7 +7,7 @@
 # use replace_ascii_db to copy this table to rebioma_prod
 global_run: true
 # marine: run marine models, in addition to terrestrial
-marine: true
+marine: false
 
 ## Database properties
 # replace_db: makes a copy of rebioma_prod and changes table and field names to work with ActiveRecord
@@ -17,11 +17,11 @@ replace_ascii_db: true
 
 ## Mask and background properties
 # read and write mask to ascii: this is a convenience and can save time if nothing else changes
-mask_write: true
-mask_read: false
+mask_write: false
+mask_read: true
 mask_path: "/home/tomay/mm/masks/"  
-mask_file: "mask_2013-01-30_20:24:48_-0800.asc"
-years_file: "years_2013-01-30_20:24:49_-0800.csv"
+mask_file: "mask_2013-01-31_15:08:02_-0800.asc"
+years_file: "years_2013-01-31_15:08:05_-0800.csv"
 read_marine_ascii_mask_location: "/home/rebioma/mm/training/mask/marine_mask.asc"
 #write_mask_path: "/home/rebioma/mm/mask/"
 use_existing_background:
@@ -32,7 +32,8 @@ use_existing_background:
 
 ## Storage path properties
 logs: "/home/tomay/rails/model-manager/lib/mm_lib/log/"
-env_path: "/home/rebioma/Storage_path/"
+tmp: "/home/tomay/rails/model-manager/tmp/"
+env_path: "/home/tomay/mm/env_layers/ascii_files/"
 taxonomic_authority_path: "/home/tomay/mm/taxonomy_edit.csv" # because of encoding issues deleted all extra cols
 link_path: "/home/rebioma/mm/ascii_links/"
 trainingdir: "/home/rebioma/mm/training/"
@@ -56,7 +57,7 @@ delete_old_tomcat: true
 # 0 = Regular full mask, 1 = smaller mask, 2 = very small test mask
 mask_run_type: 0
 # Record run types for testing:
-# 0 = Regular full run with reviewed => true, 1 = valid => true, 2 = single species
+# 0 = Regular full run with reviewed => true, 1 = single species
 records_run_type: 0
 
 ## Modeling properties

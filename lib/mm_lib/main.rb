@@ -65,37 +65,34 @@ else # create new masks
     # Generally only for testing or debugging!
     mask_names = Occurrence.where("AcceptedSpecies = 'Plagiolepis alluaudi'").group("AcceptedSpecies")
   end
-  mask_names_array = mask_names.to_a # Switch to array
-  mask_size = mask_names_array.size # Get size count
   old_perc = 0
-  #mask = [] #need this? 
   not_found = []
   cellids_years = []
   mask_cellid_array = [] # will hold cellid and occ, not destroyed each loop
-  mask_names_array.each_with_index {|m, i|
+  mask_names.each_with_index {|m, i|
     begin
-      next if tax_hash[m.acceptedspecies][1] == "1" # skip this species if marine, e.g. IsMarine == true
-      mask_raw = Occurrence.where(:validated => true).where("AcceptedSpecies = '#{m.acceptedspecies}'")
-      mask_array = mask_raw.to_a
-      mask_array.each {|maskocc| # each valid occurrence
-        lat = maskocc.decimallatitude
-        long = maskocc.decimallongitude
-        year = maskocc.yearcollected
+      next if tax_hash[m.AcceptedSpecies][1] == "1" # skip this species if marine, e.g. IsMarine == true
+      mask_raw = Occurrence.where(:validated => true).where("AcceptedSpecies = '#{m.AcceptedSpecies}'")
+      mask_raw.each {|maskocc| # each valid occurrence
+        lat = maskocc.DecimalLatitude
+        long = maskocc.DecimalLongitude
+        year = maskocc.YearCollected
         cellid = ModelUtilities.get_cellid(lat, long, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
         unless (cellid[1] > props['terr_grid']['nrows'] + props['terr_grid']['headlines'] or cellid[2] > props['terr_grid']['ncols']) # adds this unique value to every occurrence unless out of bounds
           mask_cellid_array << [cellid[0],maskocc]
           cellids_years << [cellid[0],year]
         end
       }
-      perc = ((i + 1).to_f/mask_size.to_f) * 100
+      perc = ((i + 1).to_f/mask_names.size.to_f) * 100
       progress = GeneralUtilities.get_progress(old_perc,perc)
       print progress if (progress.nil? == false)
       old_perc = perc
-      GeneralUtilities.puts_log("\n")
     rescue
-      not_found << m.acceptedspecies
+      not_found << m.AcceptedSpecies
+      next
     end
   }
+  GeneralUtilities.puts_log("\n",log)
   GeneralUtilities.puts_log(not_found.each{|missing| puts missing + " not found in taxonomy"}, log) unless not_found.nil? 
   GeneralUtilities.puts_log("Removing duplicate samples from mask...",log)
   mask = ModelUtilities.remove_grid_duplicates(mask_cellid_array)
@@ -113,8 +110,6 @@ if props['mask_write'] == true
   GeneralUtilities.puts_log("Years .csv: " + yearsasc,log)
 end
 
-Process.exit
-
 #
 # STEP 2B:
 # Make Marine Mask
@@ -122,9 +117,9 @@ Process.exit
 #
 ##
 if props['marine'] == true
-  msg = "Reading marine mask from ascii"; puts msg; log.info msg
+  GeneralUtilities.puts_log("Reading marine mask from ascii",log)
   marine_mask = GeneralUtilities.read_ascii(props['read_marine_ascii_mask_location'], props['marine_grid']['headlines'], props['marine_grid']['nrows'], props['marine_grid']['xll'], props['marine_grid']['yll'], props['marine_grid']['cell'])
-  msg = "Marine mask finished. Number of cells in mask: " + marine_mask.size.to_s; puts msg; log.info msg
+  GeneralUtilities.puts_log("Marine mask finished. Number of cells in mask: " + marine_mask.size.to_s,log)
 end
 
 #
@@ -134,60 +129,63 @@ end
 # More scalable than getting all records at one time
 #
 ##
-msg = "Getting reviewed records..."; puts msg; log.info msg
+GeneralUtilities.puts_log("Getting reviewed records...", log)
 run_type = props['records_run_type']
 case run_type
 when 0
   # Regular full production run
-  names = Occurrence.select("acceptedspecies").where(:reviewed => true).group("acceptedspecies")
+  names = Occurrence.select("AcceptedSpecies").where(:reviewed => true).group("AcceptedSpecies")
 when 1
-  # To test big set of species
-  names = Occurrence.select("acceptedspecies").where(:validated => true).group("acceptedspecies")
-when 2
   # To test one species/genera only for debugging
   #names = Occurrence.where(:acceptedspecies => "Tetraponera grandidieri").where(:reviewed => true).group("acceptedspecies")
   #names = Occurrence.where(:acceptedspecies => "Leptogenys arcirostris").where(:reviewed => true).group("acceptedspecies")
-  names = Occurrence.where(:acceptedorder => "Primates").where(:reviewed => true).group("acceptedspecies")
+  names = Occurrence.where(:AcceptedOrder => "Primates").where(:reviewed => true).group("AcceptedSpecies")
   #names = Occurrence.where(:acceptedspecies => "Abudefduf vaigiensis").where(:reviewed => true).group("acceptedspecies")
   #names = Occurrence.where(:acceptedspecies => "Plectroglyphidodon johnstonianus").where(:reviewed => true).group("acceptedspecies")
 end
-names_a = names.to_a
-puts "Records found: " + names_a.size.to_s
+#names_a = names.to_a
+# This message makes no sense
+# This is just a list of species with > 1 reviewed record, set up for the next step, when we actually get records
+#GeneralUtilities.puts_log("Found " + names.to_a.size.to_s + " reviewed records", log)
+names_size = names.to_a.size
+GeneralUtilities.puts_log("Found " + names_size.to_s + " species with positively reviewed records", log)
 
 #
 # STEP 3.5
-# TO DO: what about birds that are both? For now, if marine then not terr; can't be both
-#        this can be dealt with later, but will require using a mask to consider realm
-#        by occurrence, rather than by acceptedspecies, as we are doing now
+# TO DO: For now, if a species is marine then cannot be terr; 
+#        this can be dealt with later, but will require using a mask to define realm
+#        by occurrence location, rather than by acceptedspecies, as we are doing now
 
 #
 # STEP 4:
 # Query for each species in the list of names built above
-# TO DO: different definition to remove duplicates for marine/terr species
-msg1 = (props['marine'] == true ? "and marine " : "")
-msg = "Removing duplicate records for terrestrial " + msg1 + "species..."; puts msg; log.info msg
+# 
+##
+msg = (props['marine'] == true ? "and marine " : "")
+GeneralUtilities.puts_log("Removing duplicate records for terrestrial " + msg + "species...",log)
 final_spp = []
 old_perc = 0
-names_a.each_with_index {|i,z|
-  # Two queries, first to get public records:
-  occ_raw_public = Occurrence.where(:validated => true).where("acceptedspecies = '#{i.acceptedspecies}'").where(:public_record => true)
-  # Second query to get private records that are "vettable" i.e. modelable
-  occ_raw_private = Occurrence.where(:validated => true).where("acceptedspecies = '#{i.acceptedspecies}'").where(:public_record => false).where(:vettable => true)
-  occ_array_pub = occ_raw_public.to_a
-  occ_array_priv = occ_raw_private.to_a
-  # Join the two result set arrays with simple '+', there is no overlap 
-  occ_array = occ_array_pub + occ_array_priv
+names.each_with_index {|species,z|
+  # Two queries, first to get positively reviewed public records:
+  occ_raw_public = Occurrence.where(:reviewed => true).where("AcceptedSpecies = '#{species.AcceptedSpecies}'").where(:Public => true)
+  # Second query to get positively reviewed private records that are "vettable" i.e. modelable
+  occ_raw_private = Occurrence.where(:reviewed => true).where("AcceptedSpecies = '#{species.AcceptedSpecies}'").where(:Public => false).where(:Vettable => true)
+  #occ_array_pub = occ_raw_public.to_a
+  #occ_array_priv = occ_raw_private.to_a
+  # Join the two result set arrays with simple '+', there is no overlap. results in array, not AR relation 
+  occ_array = occ_raw_public + occ_raw_private
 
   # Remove duplicates by grid cell
-  # For terrestrial species, need to consider eras in definition of "duplicate"
+  # For terrestrial species, need to consider era, forest and location (by cell) in definition of "duplicate"
+  # For marine species, duplication is defined by grid cell only
   if occ_array.size >= props['minrecs'] # check size just for now, need to check again after removing dupes
     # first get cellid for each occurrance
     occ_cellid_array = [] # will hold cellid and occ, destroyed each loop
     occ_array.each {|occ|
-      lat = occ.decimallatitude
-      long = occ.decimallongitude
-      year = occ.yearcollected
-      name = occ.acceptedspecies
+      lat = occ.DecimalLatitude
+      long = occ.DecimalLongitude
+      year = occ.YearCollected
+      name = occ.AcceptedSpecies
 
       # Assigns realm based on marine value. By default,
       # a species that is marine and terr will be assigned marine
@@ -196,11 +194,17 @@ names_a.each_with_index {|i,z|
       
       case realm
       when "terrestrial"
+        skip = false
         cellid = ModelUtilities.get_cellid(lat, long, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
         clim_era = year < 1975 ? 1950 : 2000 # assigns clim_era to 1950 for recs < 1975; 2000 for the rest
         for_era = EnvUtilities.get_forest_era(year, props['forest_eras'])
         for_val = EnvUtilities.get_value(for_era, props['env_path'], cellid[1], cellid[2])
-        uniq_val = cellid[0].to_s + "_&_" + clim_era.to_s + "_&_" + for_val.to_s # defines a uniq val by cellid, clim_era and forest value for deleting duplicates
+        if for_val.nil?
+          GeneralUtilities.puts_log("nil forest value for " + name + "(lat: " + lat.to_s + ", long: " + long.to_s + ")",log)  
+          skip = true
+        else 
+          uniq_val = cellid[0].to_s + "_&_" + clim_era.to_s + "_&_" + for_val.to_s # defines a uniq val by cellid, clim_era and forest value for deleting duplicates
+        end  
         # i[1] shows terr, marine; i[1] = [0,1] > mar; [1,1] > terr, mar; [1,0] > terr
       when "marine"
         next if props['marine'] == false # skip this spp if no marine run
@@ -210,16 +214,16 @@ names_a.each_with_index {|i,z|
       # Adds this unique value to every occurrence. This will be used to find and delete duplicates
       # terr dupes by definition depend on forest cover value AND location
       # marine duplicates are simply those that occur in same cell
-      occ_cellid_array << [uniq_val,cellid,occ]
+      occ_cellid_array << [uniq_val,cellid,occ] unless skip == true 
     }
-    single_sp_arry = ModelUtilities.remove_grid_duplicates(occ_cellid_array)
+    single_sp = ModelUtilities.remove_grid_duplicates(occ_cellid_array)
     #msg = "..." + i.acceptedspecies + ": " + single_sp_arry.size.to_s + " records after removing duplicates"
-    final_spp << single_sp_arry if single_sp_arry.size >= props['minrecs'] # looks like [[cellid,occ],[cellid,occ],[cellid,occ]]
+    final_spp << single_sp if single_sp.size >= props['minrecs'] # looks like [[cellid,occ],[cellid,occ],[cellid,occ]]
   else
     #msg = i.acceptedspecies + ": Not enough records to model (" + occ_array.size.to_s + " records total)"
   end
 
-  perc = ((z + 1).to_f/names_a.size.to_f) * 100
+  perc = ((z + 1).to_f/names_size.to_f) * 100
   progress = GeneralUtilities.get_progress(old_perc,perc)
   print progress if (progress.nil? == false)
   old_perc = perc
@@ -230,16 +234,18 @@ names_a.each_with_index {|i,z|
 # Progress report
 #
 ##
-msg = "\nPotential n modelable spp before removing grid duplicates: " + names_a.size.to_s; puts msg; log.info msg
-msg = "Final n modelable spp after removing grid duplicates: " + final_spp.size.to_s; puts msg; log.info msg
+GeneralUtilities.puts_log("Potential n modelable spp before removing grid duplicates: " + names_size.to_s,log)
+GeneralUtilities.puts_log("Final n modelable spp after removing grid duplicates: " + final_spp.size.to_s,log)
 if final_spp.size == 0
   msg = "No species to model. Program will exit..."
   abort(msg); log.error msg
 end
 msg = "Results after removing duplicates:"; puts msg; log.info msg
 for i in (0..final_spp.size - 1) do
-  msg = final_spp[i][0][2].acceptedspecies + " (" + final_spp[i].size.to_s + ")"; puts msg; log.info msg
+  GeneralUtilities.puts_log(final_spp[i][0][2].AcceptedSpecies + " (" + final_spp[i].size.to_s + ")",log)
 end
+
+Process.exit
 
 #
 # STEP 6:

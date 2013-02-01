@@ -1,9 +1,0 @@
-database:
-  adapter: "mysql"
-  host: "localhost"
-  database_in: "database_in"
-  database: "database_out"
-  user: "user"
-  password: "password"
-  copy_table: "asc_models"
-  final_table: "asc_model"
