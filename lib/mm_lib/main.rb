@@ -2,6 +2,7 @@ require ARGV[0] #rails_environment
 require 'logger'
 require 'fileutils'
 require 'csv'
+require 'zipruby'
 
 # modules
 require_relative 'modules/model_utilities'
@@ -12,19 +13,22 @@ require_relative 'modules/csv_writer2'
 
 #
 # SETUP:
-# Get properties from properties file, start logging
+# Gets properties from properties file, start logging
 #
 ##
 fn = File.dirname(File.expand_path(__FILE__)) + '/yml/properties.yml'
 props = YAML::load(File.open(fn))
 log = Logger.new(props['logs'] + "LOG_" + Time.now.to_s.gsub(" ","_") + ".txt")
+# Set rails env allowing different target databases, e.g. dev || prop
+Rails.env = props['rails_environment']
+GeneralUtilities.puts_log("Set rails environment to " + Rails.env, log)
 
 # 
 # STEP 1
 # Read taxonomic authority
 ##
 tax_hash = ModelUtilities.make_taxonomy_hash(props['taxonomic_authority_path'])
-GeneralUtilities.puts_log("Reading taxonomic authority. Number of species in TA: " + tax_hash.size.to_s, log)
+GeneralUtilities.puts_log("Reading taxonomic authority. Total species in TA: " + tax_hash.size.to_s, log)
 terr_spp = 0; mar_spp = 0
 i = 0
 tax_hash.each {|key|
@@ -44,7 +48,7 @@ GeneralUtilities.puts_log("Found " + terr_spp.to_s + " terrestrial" + msg + " sp
 # This is used for bias masking when creating SWD
 #
 ##
-msg =  "Reading database..."; puts msg; log.info msg
+GeneralUtilities.puts_log("Reading database...", log)
 if props['mask_read'] == true # use saved mask
   GeneralUtilities.puts_log("Reading terrestrial mask and years from ascii...", log)
   mask = GeneralUtilities.read_ascii(props['mask_path'] + props['mask_file'], props['terr_grid']['headlines'], props['terr_grid']['nrows'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['cell'])
@@ -99,8 +103,8 @@ else # create new masks
   years = ModelUtilities.remove_years_by_cellid(cellids_years)
 end
 
-msg = "Terrestrial mask finished. Number of sampled cells: " + mask.size.to_s; puts msg; log.info msg
-msg = "Total number of unique era-location records (from years array): " + years.size.to_s; puts msg; log.info msg
+GeneralUtilities.puts_log("Terrestrial mask finished. Number of sampled cells: " + mask.size.to_s, log)
+GeneralUtilities.puts_log("Total number of unique era-location records (from years array): " + years.size.to_s, log)
 
 if props['mask_write'] == true
   GeneralUtilities.puts_log("Writing mask to ascii and years to csv for later use...", log)
@@ -233,13 +237,13 @@ names.each_with_index {|species,z|
 #
 ##
 GeneralUtilities.puts_log("\n",log)
-GeneralUtilities.puts_log("Potential n modelable spp before removing grid duplicates: " + names_size.to_s,log)
-GeneralUtilities.puts_log("Final n modelable spp after removing grid duplicates: " + final_spp.size.to_s,log)
+GeneralUtilities.puts_log("Potential number of modelable species before removing grid duplicates: " + names_size.to_s,log)
+GeneralUtilities.puts_log("Final number of modelable species after removing grid duplicates: " + final_spp.size.to_s,log)
 if final_spp.size == 0
   msg = "No species to model. Program will exit..."
   abort(msg); log.error msg
 end
-msg = "Results after removing duplicates:"; puts msg; log.info msg
+GeneralUtilities.puts_log("Results after removing duplicates:", log)
 for i in (0..final_spp.size - 1) do
   GeneralUtilities.puts_log(final_spp[i][0][2].AcceptedSpecies + " (" + final_spp[i].size.to_s + ")",log)
 end
@@ -249,13 +253,13 @@ end
 # Create one terr and one marine background SWD for use in all MaxEnt runs in this session
 # TO DO: Need marine background SWD also? Yes but simple derivation, random within entire area
 ##
-GeneralUtilities.puts_log("Creating background SWDs...",log)
 if props['use_existing_background']['value'] == false # create new background
-  msg = "Creating background SWDs for climate, climate/forest and marine scenarios..."; puts msg; log.info msg
-  backfiles = ModelUtilities.create_background_swd(years, mask)
+  msg = props['marine'] == true ? "climate, climate/forest, and marine" : "climate and climate/forest" 
+  GeneralUtilities.puts_log("Creating background SWDs for " + msg + " scenarios...", log)
+  backfiles = ModelUtilities.create_background_swd(years, mask, props)
   mar_backfile = true # allows no marine models 
   if props['marine'] == true
-    mar_backfile = ModelUtilities.create_marine_background_swd(marine_mask)
+    mar_backfile = ModelUtilities.create_marine_background_swd(marine_mask, props)
   end
   if (backfiles and mar_backfile)
     GeneralUtilities.puts_log("\nBackground SWDs ok: true",log)
@@ -264,23 +268,20 @@ if props['use_existing_background']['value'] == false # create new background
     abort(msg); log.error msg
   end
 else # use existing background files named in properties.yml
-  GeneralUtilities.puts_log("Using existing background SWDs from previous run...",log)
+  GeneralUtilities.puts_log("Using existing background SWDs from previous run.",log)
   backfiles = []
   backfiles << props['use_existing_background']['file1'] #string points to csv file, name assumed to match props['scen1'] below
   backfiles << props['use_existing_background']['file2'] #string points to csv file, assumed to match props['scen2'] below
   mar_backfile = props['use_existing_background']['marine_file'] if props['marine'] == true # string points to marine background swd file
 end
 
-Process.exit
-
-
 #
 # STEP 6b:
-# Delete entries in ascii model table if true
+# Delete entries in ascii model table if props['global_run'] == true
 ##
 # First delete all existing records from AscModel table
-# This assumes a global model run from scratch; not appending to existing set here!
-AscModel.delete_all if props['global_run'] # deletes all existing records in AscModel table (rebioma_mm)
+# This assumes a global model run from scratch; not appending to existing set of models!
+AscModel.delete_all if props['delete_ascii_model_records'] # deletes all existing records in AscModel table (in db set in database.yml)
 
 #
 # STEP 7:
@@ -297,28 +298,29 @@ for j in (0..final_spp.size - 1) do #every species
   good_proj = false # looks for at least one successful projection for each species
 
   # One sample swd method for terr, another for marine
-  realm = tax_hash[final_spp[j][0][2].acceptedspecies][1] == "1" ? "marine" : "terrestrial"
+  realm = tax_hash[final_spp[j][0][2].AcceptedSpecies][1] == "1" ? "marine" : "terrestrial"
   # TO DO: add messaging here or inside create_swd
   # Notes: marine swd with samples is not really needed here becuase this is not used below
   #        given that there is no marine projection (for now)
   #        really all that is needed for marine is name,lat,long - could speed this up TO DO, new method
-  files = realm == "marine" ? ModelUtilities.create_marine_sample_swd(final_spp[j]) : ModelUtilities.create_sample_swd(final_spp[j])
+  files = realm == "marine" ? ModelUtilities.create_marine_sample_swd(final_spp[j],props) : ModelUtilities.create_sample_swd(final_spp[j],props)
   name = files["name"]
   final_count = files["count"]
-  msg = "Number of records start: " + final_spp[j].size.to_s; puts msg; log.info msg
-  msg = "Number of records after making SWD and removing records with NODATA for environmental values: " + final_count.to_s; puts msg; log.info msg
+  GeneralUtilities.puts_log("Number of records start: " + final_spp[j].size.to_s, log)
+  GeneralUtilities.puts_log("Number of records after making SWD and removing records with NODATA for environmental values: " + final_count.to_s, log)
   if final_count < props['minrecs']
-    msg = "Not enough records to model. Moving to next species..."; puts msg; log.info msg
+    GeneralUtilities.puts_log("Not enough records to model. Moving to next species...",log)
     next
   else
-    msg = "Done sample SWD for species " + name; puts msg; log.info msg
+    GeneralUtilities.puts_log("Done sample SWD for species " + name,log)
   end
+
   #
   # Step 7a. Run Maxent (model training)
   #
   ##
   climfor_model, climonly_model, marine_model = nil
-  msg = "Starting MaxEnt..."; puts msg; log.info msg
+  GeneralUtilities.puts_log("Starting MaxEnt...",log)
   replicates = (final_count >= props['replicates']['sample_threshold'] ? props['replicates']['reps_above'] : props['replicates']['reps_below'])
   args = ["replicates=" + replicates.to_s, "replicatetype=crossvalidate", "redoifexists", "nowarnings", "novisible", "threads=" + props['threads_arg'].to_s, "extrapolate=" + props['extrapolate'].to_s, "autorun"]
   validate = []
@@ -331,22 +333,22 @@ for j in (0..final_spp.size - 1) do #every species
       FileUtils.rm_rf(out) if FileTest::directory?(out)
       Dir::mkdir(out)
     end
-    #puts "Params: " + props['maxent_path'] + ", " + backfiles[0] + ", " + props['trainingdir'] + name + "_" + props['scen_name1'] + "_swd.csv"  + ", " + output
+    #Debug# puts "Params: " + props['maxent_path'] + ", " + backfiles[0] + ", " + props['trainingdir'] + name + "_" + props['scen_name1'] + "_swd.csv"  + ", " + output
     climonly_model = ModelUtilities.run_maxent(props['maxent_path'], backfiles[0], props['trainingdir'] + name + "_" + props['scen_name1'] + "_swd.csv", output, args, props['memory_arg'])
     climfor_model = ModelUtilities.run_maxent(props['maxent_path'], backfiles[1], props['trainingdir'] + name + "_" + props['scen_name2'] + "_swd.csv", output2, args, props['memory_arg'])
     if climonly_model
-      msg = name + " " + props['scen_name1'] + "_model success: " + climonly_model.to_s; puts msg; log.info msg
+      GeneralUtilities.puts_log(name + " " + props['scen_name1'] + "_model success: " + climonly_model.to_s,log)
       validate << {"model" => props['scen_name1'], "output" => output }
       invalid = false
     else
-      msg = name + " " + props['scen_name1'] + "_model success: " + climonly_model.to_s; puts msg; log.info msg
+      GeneralUtilities.puts_log(name + " " + props['scen_name1'] + "_model success: " + climonly_model.to_s, log)
     end
     if climfor_model
-      msg = name + " " + props['scen_name2'] + "_model success: " + climfor_model.to_s; puts msg; log.info msg
+      GeneralUtilities.puts_log(name + " " + props['scen_name2'] + "_model success: " + climfor_model.to_s, log)
       validate << {"model" => props['scen_name2'], "output" => output2 }
       invalid = false
     else
-      msg = name + " " + props['scen_name2'] + "_model success: " + climonly_model.to_s; puts msg; log.info msg
+      GeneralUtilities.puts_log(name + " " + props['scen_name2'] + "_model success: " + climonly_model.to_s, log)
     end
   when "marine"
     output3 = props['trainingdir'] + name + "_marine" + File::SEPARATOR
@@ -354,7 +356,7 @@ for j in (0..final_spp.size - 1) do #every species
     Dir::mkdir(output3)
     marine_model = ModelUtilities.run_maxent(props['maxent_path'], mar_backfile, props['trainingdir'] + name + "_" + "marine_swd.csv", output3, args, props['memory_arg'])
     if marine_model
-      msg = name + " marine_model success: " + marine_model.to_s; puts msg; log.info msg
+      GeneralUtilities.puts_log(name + " marine_model success: " + marine_model.to_s, log)
       validate << {"model" => "marine", "output" => output3 }
       invalid = false
     end
@@ -377,14 +379,14 @@ for j in (0..final_spp.size - 1) do #every species
       v["validity"] = false # force to false
       invalid = true
     else
-      msg = GeneralUtilities.dash(80) + "\n" + name + " " + v["model"] + " VALIDITY TEST:" + "\n" + GeneralUtilities.dash(80); puts msg; log.info msg
-      msg = "Mean AUC: " + v["mean_auc"].to_s + "\nStandard error: " + v["standard_error"].to_s + "\nValidity: " + v["value"].to_s; puts msg; log.info msg
-      msg = name + " " + v["model"] + " valid: " + v["validity"].to_s + "\n" + GeneralUtilities.dash(80); puts msg; log.info msg
+      GeneralUtilities.puts_log(GeneralUtilities.dash(80) + "\n" + name + " " + v["model"] + " VALIDITY TEST:" + "\n" + GeneralUtilities.dash(80), log)
+      GeneralUtilities.puts_log("Mean AUC: " + v["mean_auc"].to_s + "\nStandard error: " + v["standard_error"].to_s + "\nValidity: " + v["value"].to_s, log)
+      GeneralUtilities.puts_log(name + " " + v["model"] + " valid: " + v["validity"].to_s + "\n" + GeneralUtilities.dash(80), log)
     end
   }
 
   if invalid # NO valid models
-    msg = "NO valid models for " + name + "..."; puts msg; log.error msg
+    GeneralUtilities.puts_log("NO valid models for " + name + "...", log)
   else # At least one valid model
     #
     # Step 7c. Create full Maxent model(s) if at least one valid result
@@ -412,7 +414,7 @@ for j in (0..final_spp.size - 1) do #every species
         #samples = props['trainingdir'] + name + "_" + v["model"].sub + "_swd.csv"
         #puts samples
         s = ModelUtilities.run_maxent(props['maxent_path'], background_file, props['trainingdir'] + name + "_" + v["model"] + "_swd.csv", output, args, props['memory_arg'])
-        msg = name + " " + v["model"] + "_full FULL model success: " + s.to_s; puts msg; log.info msg
+        GeneralUtilities.puts_log(name + " " + v["model"] + "_full FULL model success: " + s.to_s, log)
       else
         # TO DO Delete model testing stuff -- to save space
         # here or at end, after copy html etc.?
@@ -424,7 +426,7 @@ for j in (0..final_spp.size - 1) do #every species
   # Run Maxent projections from full model lambdas
   #
   ##
-  msg = "Projecting..."; puts msg; log.info msg
+  GeneralUtilities.puts_log("Projecting...", log)
   newdir = props['outputdir'] + name
   FileUtils.rm_rf(newdir) if FileTest::directory?(newdir)
   Dir::mkdir(newdir)
@@ -518,10 +520,10 @@ for j in (0..final_spp.size - 1) do #every species
           }
           #archive.add_file("plots" + File::SEPARATOR + name + "_roc.png", output + "plots" + File::SEPARATOR + name + "_roc.png")
         end
-        msg = "Created " + scenario + " projection for " + name + ": " + project_ok.to_s; puts msg; log.info msg
+        GeneralUtilities.puts_log("Created " + scenario + " projection for " + name + ": " + project_ok.to_s, log)
       end # project_ok
       if project_ok == false
-        msg = "Projection failed for " + name + ", scenario: " + scenario; puts msg; log.error msg
+        GeneralUtilities.puts_log("Projection failed for " + name + ", scenario: " + scenario, log)
       end
     } # scenario
   } # scenarios
@@ -541,29 +543,15 @@ for j in (0..final_spp.size - 1) do #every species
     #
     ##
     cite_file = File.new(props['outputdir'] + name + File::SEPARATOR + "citation.txt","w")
-    source_file = File.open("citation.template.txt","r")
+    source_file = File.open(File.dirname(File.expand_path(__FILE__)) + "/text/citation.template.txt","r")
     source_lines = source_file.readlines
 
     i = 0
     source_lines.each {|line|
-      line = line.sub("zzz", final_spp[j][0][2].acceptedspecies) if i == 0
+      line = line.sub("zzz", final_spp[j][0][2].AcceptedSpecies) if i == 0
       line = line.sub("zzz", Time.now.to_s) if i == 1
       line = line.sub("zzz", final_count.to_s) if i == 3
       line = line.sub("zzz", priv_array.size.to_s) if i == 4
-      if i == 5
-        if priv_array.size == 0
-          i += 1
-          next
-        else # get private data emails
-             ## TO DO: Don't do this, these are private
-          a_props = []
-          priv_array.uniq.sort_by{|x|priv_array.grep(x)}.each{|x| a_props << [x, priv_array.grep(x).size]}
-          zz = []
-          a_props.each {|ee| zz << ee.join(" (") }
-          line = line.sub("zzz", zz.join("), ") + ")")
-         #line = line.sub("zzz", priv_array.sort.uniq.join(", "))
-        end
-      end
       line = line.sub("zzz", name + "_occurrences.csv") if i == 7
       line = line.sub("zzz", Time.now.year.to_s) if i == 10
       line = line.sub("zzz", GeneralUtilities.get_month_name(Time.now.month) + " " + Time.now.day.to_s + ", " + Time.now.year.to_s) if i == 12
@@ -598,11 +586,11 @@ for j in (0..final_spp.size - 1) do #every species
     ##
     #msg = "Writing results to asc_models database table..."
     ModelUtilities.asc_table_add(name)
-    msg = "Finished models for " + name + " (" + (j + 1).to_s + " of " + final_spp.size.to_s + " species total)"; puts msg; log.info msg
+    GeneralUtilities.puts_log("Finished models for " + name + " (" + (j + 1).to_s + " of " + final_spp.size.to_s + " species total)", log)
   else
-    msg = "No valid projections for " + name + "..."; puts msg; log.error msg
+    GeneralUtilities.puts_log("No valid projections for " + name + "...", log)
   end # at least one validated full model
-  msg = GeneralUtilities.dash(80) + "\n" + GeneralUtilities.dash(80); puts msg; log.info msg
+  GeneralUtilities.puts_log(GeneralUtilities.dash(80) + "\n" + GeneralUtilities.dash(80), log)
 end #each species
 
 # Final to do:
@@ -615,12 +603,12 @@ end #each species
 ## throw existing users off. Also may require restarting tomcat for changes to work online
 if props['replace_ascii_db']
   final_bash = DbUtilities.run_ascii_table_bash(props, db)
-  msg = "Ascii model database table copied ok: " + final_bash.to_s; puts msg; log.info msg
+  GeneralUtilities.puts_log("Ascii model database table copied ok: " + final_bash.to_s, log)
 end
 
 # chown files created during run
 if props['chown']
-  msg = "Changing model ownership..."; puts msg; log.info msg
+  GeneralUtilities.puts_log("Changing model ownership...", log)
   Dir.glob(props['trainingdir'] + '**/*').each {|f| File.chown props['owner_uid'], props['owner_uid'], f}
   Dir.glob(props['outputdir'] + '**/*').each {|e| File.chown props['owner_uid2'], props['owner_uid2'], e}
 end
@@ -628,7 +616,7 @@ end
 # copy output to Models path on tomcat
 if props['move_to_tomcat']
   if props['delete_old_tomcat']
-    msg = "Deleting existing models from tomcat directory: " + props['models_path']; puts msg; log.info msg
+    GeneralUtilities.puts_log("Deleting existing models from tomcat directory: " + props['models_path'], log)
     FileUtils.rm_r props['models_path']
     FileUtils.mkdir props['models_path']
   end
@@ -637,7 +625,7 @@ if props['move_to_tomcat']
   #   enables storage of one copy - note however need to create new outputdir each time
   #   if for any reason you want to keep old models, and supplement with new ones as opposed
   #   to regenerating all models every time
-  msg = "Copying new models to Tomcat..."; puts msg; log.info msg
+  GeneralUtilities.puts_log("Copying new models to Tomcat...", log)
   Dir.glob(props['outputdir'] + '**/*').each {|f|
     if File.directory?(f)
       FileUtils.mkdir_p(props['models_path'] + f.sub(props['outputdir'],""))
@@ -652,8 +640,8 @@ if props['move_to_tomcat']
 
   # Change ownership (not relevant for links, but ok)
   Dir.glob(props['models_path'] + '**/*').each {|e| File.chown props['owner_uid2'], props['owner_uid2'], e} if props['chown']
-  msg = "Changing model ownership..."; puts msg if props['chown']; log.info msg if props['chown']
+  GeneralUtilities.puts_log("Changing model ownership...", log) if props['chown']
 end
 
-msg = "Model Manager complete."; puts msg; log.info msg
+GeneralUtilities.puts_log("Model Manager complete.", log)
 

@@ -3,7 +3,6 @@ created by REBIOMA at http://data.rebioma.net on zzz
 
 Total occurrence records in models: zzz
 Total private records in models: zzz
-Private data owner email(s): zzz
 
 All public occurrence data used to create models saved to file named:
 zzz

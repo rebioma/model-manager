@@ -116,14 +116,13 @@ module ModelUtilities
   #
   # Create terrestrial background swd for two scenarios
   #
-  def ModelUtilities.create_background_swd(years, mask)
-    props = YAML.load_file("properties.yml")
+  def ModelUtilities.create_background_swd(years, mask, props)
     clim1950 = props['clim_era_layers'][1950].split(",")
     clim2000 = props['clim_era_layers'][2000].split(",")
-    files = [props['trainingdir'] + props['scen_name1'] + "_background.swd",props['trainingdir'] + props['scen_name2'] + "_background.swd",props['trainingdir'] + "background_" + props['scen_name2'] + "_swd_LOG.csv"]
+    files = [props['trainingdir'] + props['scen_name1'] + "_background.swd",props['trainingdir'] + props['scen_name2'] + "_background.swd"] #,props['trainingdir'] + "background_" + props['scen_name2'] + "_swd_LOG.csv"]
     backfile = File.new(files[0], "w") # No forest background swd
     backfile2 = File.new(files[1], "w") # With forest background swd
-    backlog2 = File.new(files[2], "w")
+    #backlog2 = File.new(files[2], "w")
 
     head = []
     head << "name" << "longitude" << "latitude"
@@ -135,7 +134,7 @@ module ModelUtilities
     backfile2.puts(head.join(","))
     # OLD head << "year" << "era" << "prop[1]" << "type"
     head << "year" << "era" << "prop[1]"
-    backlog2.puts(head.join(","))
+    #backlog2.puts(head.join(","))
     proportions = GeneralUtilities.eras_proportions(years)
     # To check that proportions sum to 1.0:
     # a = 0; proportions.each{|b| a = a + b[1]}; puts a
@@ -162,8 +161,8 @@ module ModelUtilities
         # UNCOMMENT to select all background randomly (without consideration of sample mask)
         #occ = ModelUtilities.get_random_occurrence(props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['cell'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['for_era_layers'][1950], props['env_path'], props['terr_grid']['headlines'])
 
-        lat = occ.decimallatitude
-        long = occ.decimallongitude
+        lat = occ.DecimalLatitude
+        long = occ.DecimalLongitude
         cellid = ModelUtilities.get_cellid(lat, long, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
 
         line << "background" << long << lat
@@ -186,8 +185,8 @@ module ModelUtilities
         year = EnvUtilities.get_year(era)
         # old check on mask/random limit
         #line << year << era << prop[1] << (count <= limit2 ? "mask" : "random")
-        line << year << era << prop[1]
-        backlog2.puts(line.join(","))
+        #line << year << era << prop[1]
+        #backlog2.puts(line.join(","))
         count += 1
       end
       perc = ((p + 1).to_f/proportions_size.to_f) * 100
@@ -199,13 +198,12 @@ module ModelUtilities
     backfile2.flush
     backfile.close
     backfile2.close
-    backlog2.flush
-    backlog2.close
+    #backlog2.flush
+    #backlog2.close
     return files
   end
 
-  def ModelUtilities.create_marine_background_swd(marine_mask)
-    props = YAML.load_file("properties.yml")
+  def ModelUtilities.create_marine_background_swd(marine_mask, props)
     marlayers = props['marine_layers'].split(",")
     backfile = File.new(props['trainingdir'] + "background_marine.swd", "w") # marine background file
     head = []
@@ -222,8 +220,8 @@ module ModelUtilities
       # UNCOMMENT to select all background randomly (without consideration of sample mask)
       #occ = ModelUtilities.get_random_occurrence(props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['cell'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['for_era_layers'][1950], props['env_path'], props['terr_grid']['headlines'])
 
-      lat = occ.decimallatitude
-      long = occ.decimallongitude
+      lat = occ.DecimalLatitude
+      long = occ.DecimalLongitude
       cellid = ModelUtilities.get_cellid(lat, long, props['marine_grid']['cell'], props['marine_grid']['xll'], props['marine_grid']['yll'], props['marine_grid']['nrows'], props['marine_grid']['ncols'], props['marine_grid']['headlines'])
 
       line << "background" << long << lat
@@ -254,58 +252,13 @@ module ModelUtilities
   # species[n] is one occurrence array, consisting of n=[uniq_val,[cellid_array],occ]
   # species[n][1] is the cellid, for looking up env vals; cellid is an array of [cellid, getrow, getcol]
   # species[n][2] is the occurrence itself
-  # THIS ONE DOES NOT LOOK UP ENV VALUES! SINCE WE ARE NOT PROJECTING< ONLY NEED LAT-LONG
-  def ModelUtilities.create_marine_sample_swd2(species)
-    # no scenarios, NO ENV VALUES; just get cellid and lookup lat-long
-    props = YAML.load_file("properties.yml")
-    occ_array = [] # to hold occurrences for csv output
-    priv_array = [] # counter for private records
-    names = (species[0][2].acceptedspecies).split(" ") # get name from first record
-    name = names.join("_") # puts name into format for SWD
-    puts "Starting marine model for " + name
-
-    head = []
-    head << "name" << "longitude" << "latitude"
-    afile = File.new(props['trainingdir'] + name + "_marine_swd.csv", "w") # marine
-    afile.puts(head.join(","))
-
-    #
-    # Create sample SWD for one species
-    #
-    ##
-    count = 0
-    for z in (0..species.size - 1) do #every cellid-occurrence array
-      line = []
-      cellid = species[z][1]
-      occ = species[z][2]
-      if occ.public_record == true
-        occ_array << occ
-      else
-        occ.email_visible ? priv_array << occ.email : priv_array << "email not provided"
-      end
-      line << name << occ.decimallongitude << occ.decimallatitude
-      afile.puts(line.join(",")) # Write single line
-      count += 1
-    end
-    afile.flush
-    afile.close
-    files = {"name"=> name, "acceptedspecies" => species[0][2].acceptedspecies, "mar_swd_file"=> afile, "occ_array" => occ_array, "priv_array" => priv_array, "count" => count}
-    return files # hash with name and mar_swd_file
-  end
-
-    ##
-  # Creates sample SWD from an array of occurrences for one marine species: (species)
-  # species[n] is one occurrence array, consisting of n=[uniq_val,[cellid_array],occ]
-  # species[n][1] is the cellid, for looking up env vals; cellid is an array of [cellid, getrow, getcol]
-  # species[n][2] is the occurrence itself
   # THIS ONE INCLUDES ENV VALUES NEEDED FOR SWD FOR PROJECTION
-  def ModelUtilities.create_marine_sample_swd(species)
+  def ModelUtilities.create_marine_sample_swd(species,props)
     # no scenarios, just get cellid and lookup env values
-    props = YAML.load_file("properties.yml")
     mar_layers = props['marine_layers'].split(",")
     occ_array = [] # to hold occurrences for csv output
     priv_array = [] # counter for private records
-    names = (species[0][2].acceptedspecies).split(" ") # get name from first record
+    names = (species[0][2].AcceptedSpecies).split(" ") # get name from first record
     name = names.join("_") # puts name into format for SWD
     puts "Starting marine model for " + name
 
@@ -329,9 +282,9 @@ module ModelUtilities
       if occ.public_record == true
         occ_array << occ
       else
-        occ.email_visible ? priv_array << occ.email : priv_array << "email not provided"
+        occ.EmailVisible ? priv_array << occ.email : priv_array << "email not provided"
       end
-      line << name << occ.decimallongitude << occ.decimallatitude
+      line << name << occ.DecimalLongitude << occ.DecimalLatitude
       # lookup clim values
       nodata = false
       mar_layers.each {|clayer|
@@ -345,7 +298,7 @@ module ModelUtilities
     end
     afile.flush
     afile.close
-    files = {"name"=> name, "acceptedspecies" => species[0][2].acceptedspecies, "mar_swd_file"=> afile, "occ_array" => occ_array, "priv_array" => priv_array, "count" => count}
+    files = {"name"=> name, "acceptedspecies" => species[0][2].AcceptedSpecies, "mar_swd_file"=> afile, "occ_array" => occ_array, "priv_array" => priv_array, "count" => count}
     return files # hash with name and mar_swd_file
   end
 
@@ -356,17 +309,16 @@ module ModelUtilities
   # species[n][1] is the cellid, for looking up env vals; cellid is an array of [cellid, getrow, getcol]
   # species[n][2] is the occurrence
   #
-  def ModelUtilities.create_sample_swd(species)
+  def ModelUtilities.create_sample_swd(species,props)
     ##
     # Setup and open files
     #
-    props = YAML.load_file("properties.yml")
     clim1950 = props['clim_era_layers'][1950].split(",")
     clim2000 = props['clim_era_layers'][2000].split(",")
     #for j in (0..final_spp.size - 1) do
     occ_array = [] # to hold occurrences for csv output
     priv_array = [] # counter for private records
-    names = (species[0][2].acceptedspecies).split(" ") # get name from first record
+    names = (species[0][2].AcceptedSpecies).split(" ") # get name from first record
     name = names.join("_") # puts name into format for SWD
     msg = "Starting model for " + name; puts msg#; log.info msg
     head = []
@@ -376,12 +328,12 @@ module ModelUtilities
       }
     afile = File.new(props['trainingdir'] + name + "_" + props['scen_name1'] + "_swd.csv", "w") # No forest scenario
     afile2 = File.new(props['trainingdir'] + name + "_" + props['scen_name2'] + "_swd.csv", "w") # with forest
-    logfile = File.new(props['trainingdir'] + name + "_" + props['scen_name2'] + "_swd_LOG.csv", "w") # SWD log file
+    #logfile = File.new(props['trainingdir'] + name + "_" + props['scen_name2'] + "_swd_LOG.csv", "w") # SWD log file
     afile.puts(head.join(","))
     head << "pfc"
     afile2.puts(head.join(","))
-    head << "year"
-    logfile.puts(head.join(","))
+    #head << "year"
+    #logfile.puts(head.join(","))
 
     #
     # Create sample SWD for one species
@@ -392,14 +344,14 @@ module ModelUtilities
       line = []
       cellid = species[z][1]
       occ = species[z][2]
-      if occ.public_record == true
+      if occ.Public == true
         occ_array << occ #only public records into occ_array
       else
-        occ.email_visible ? priv_array << occ.email : priv_array << "email not provided"
+        occ.EmailVisible ? priv_array << occ.email : priv_array << "email not provided"
       end
 
-      line << name << occ.decimallongitude << occ.decimallatitude
-      year = occ.yearcollected
+      line << name << occ.DecimalLongitude << occ.DecimalLatitude
+      year = occ.YearCollected
       clims = year < 1975 ? clim1950 : clim2000 # assigns clim_era to 1950 for recs < 1975; 2000 for the rest
 
       # lookup clim values
@@ -416,16 +368,16 @@ module ModelUtilities
       line << EnvUtilities.get_value(for_era, props['env_path'], cellid[1], cellid[2])
       afile2.puts(line.join(",")) # Write with forest line
       line << year
-      logfile.puts(line.join(","))
+      #logfile.puts(line.join(","))
     end
     afile.flush
     afile2.flush
-    logfile.flush
+    #logfile.flush
     afile.close
     afile2.close
-    logfile.close
+    #logfile.close
     #files = [name, afile, afile2, logfile] # what about occ_array and priv_array??
-    files = {"name"=> name, "climonly_swd_file"=> afile, "climfor_swd" => afile2, "logfile" => logfile, "occ_array" => occ_array, "priv_array" => priv_array, "count" => count}
+    files = {"name"=> name, "climonly_swd_file"=> afile, "climfor_swd" => afile2, "occ_array" => occ_array, "priv_array" => priv_array, "count" => count}
     return files
   end
 
