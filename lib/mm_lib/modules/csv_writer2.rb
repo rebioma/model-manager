@@ -24,7 +24,7 @@ module CsvWriter2
       review_array = Occurrence.find(rec_id).reviews
       emails = []
       ## review_array.each {|review| emails << review.user.email } ## not working through AR assoc
-      review_array.each {|review| emails << User.find(review.userId)}
+      review_array.each {|review| emails << User.find(review.userId).email}
       line << emails.join(" | ")
       #puts "line:"
       #puts line.join(",")
