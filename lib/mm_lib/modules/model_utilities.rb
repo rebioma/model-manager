@@ -36,7 +36,8 @@ module ModelUtilities
     return final
   end
 
-  # Removes duplicates from an array of any dimension, based on the uniqueness of the first element
+  # Removes duplicates from an array of any dimension, 
+  # based on the uniqueness of the first element
   def ModelUtilities.remove_grid_duplicates(in_array)
     keep = 9999
     deldup = []
@@ -418,7 +419,7 @@ module ModelUtilities
   end
 
   def ModelUtilities.validate_result(indir, replicates)
-    maxent_result_csv = File.open(indir + "maxentResults.csv", "r")
+    maxent_result_csv = File.open(indir + "maxentResults.csv", "_")
     lines = maxent_result_csv.readlines
     header = lines[0].split(",")
     n = header.index("Training AUC")

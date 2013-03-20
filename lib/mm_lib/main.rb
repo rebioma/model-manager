@@ -7,7 +7,7 @@ require 'zipruby'
 # modules
 require_relative 'modules/model_utilities'
 require_relative 'modules/env_utilities'
-require_relative 'modules/db_utilities'
+#require_relative 'modules/db_utilities'
 require_relative 'modules/general_utilities'
 require_relative 'modules/csv_writer2'
 
@@ -19,7 +19,7 @@ require_relative 'modules/csv_writer2'
 fn = File.dirname(File.expand_path(__FILE__)) + '/yml/properties.yml'
 props = YAML::load(File.open(fn))
 log = Logger.new(props['logs'] + "LOG_" + Time.now.to_s.gsub(" ","_") + ".txt")
-# Set rails env allowing different target databases, e.g. dev || prop
+# Set rails env allowing different target databases, e.g. dev || prod
 Rails.env = props['rails_environment']
 GeneralUtilities.puts_log("Set rails environment to " + Rails.env, log)
 
@@ -29,18 +29,13 @@ GeneralUtilities.puts_log("Set rails environment to " + Rails.env, log)
 ##
 tax_hash = ModelUtilities.make_taxonomy_hash(props['taxonomic_authority_path'])
 GeneralUtilities.puts_log("Reading taxonomic authority. Total species in TA: " + tax_hash.size.to_s, log)
-terr_spp = 0; mar_spp = 0
-i = 0
-tax_hash.each {|key|
-  terr_spp += 1 if key.last[0] == "1"
-  mar_spp += 1 if key.last[1] == "1"
-}
-if (mar_spp == 0 and props['marine'] == true)
+species_count = GeneralUtilities.count_species(tax_hash)
+if (species_count["mar_spp"] == 0 and props['marine'] == true)
   msg = "No marine species found in taxonomic authority. Check configuration. Program will exit..."
   abort(msg); log.error msg
 end
-msg = mar_spp > 0 ? " and " + mar_spp.to_s + " marine" : ""
-GeneralUtilities.puts_log("Found " + terr_spp.to_s + " terrestrial" + msg + " species in TA", log)
+msg = species_count["mar_spp"] > 0 ? " and " + species_count["mar_spp"].to_s + " marine" : ""
+GeneralUtilities.puts_log("Found " + species_count["terr_spp"].to_s + " terrestrial" + msg + " species in TA", log)
 
 #
 # STEP 2:
@@ -70,7 +65,7 @@ else # create new masks
     mask_names = Occurrence.where("AcceptedSpecies = 'Plagiolepis alluaudi'").group("AcceptedSpecies")
   end
   old_perc = 0
-  not_found = []
+  not_found = [] # holds rescue cases
   cellids_years = []
   mask_cellid_array = [] # will hold cellid and occ, not destroyed each loop
   mask_names.each_with_index {|m, i|
@@ -87,10 +82,7 @@ else # create new masks
           cellids_years << [cellid[0],year]
         end
       }
-      perc = ((i + 1).to_f/mask_names.size.to_f) * 100
-      progress = GeneralUtilities.get_progress(old_perc,perc)
-      print progress if (progress.nil? == false)
-      old_perc = perc
+      old_perc = GeneralUtilities.print_progress(i,mask_names.size,old_perc)
     rescue
       not_found << m.AcceptedSpecies
       next
@@ -99,6 +91,7 @@ else # create new masks
   GeneralUtilities.puts_log("\n",log)
   GeneralUtilities.puts_log(not_found.each{|missing| puts missing + " not found in taxonomy"}, log) unless not_found.nil? 
   GeneralUtilities.puts_log("Removing duplicate samples from mask...",log)
+  # removes duplicates for mask and years
   mask = ModelUtilities.remove_grid_duplicates(mask_cellid_array)
   years = ModelUtilities.remove_years_by_cellid(cellids_years)
 end
@@ -179,6 +172,7 @@ names.each_with_index {|species,z|
 
   # Remove duplicates by grid cell
   # For terrestrial species, need to consider era, forest and location (by cell) in definition of "duplicate"
+  # Note: after 2013 update of Worldclim, there is no longer a 1950 "era", so duplicate is now only defined by forest at date collected, and location
   # For marine species, duplication is defined by grid cell only
   if occ_array.size >= props['minrecs'] # check size just for now, need to check again after removing dupes
     # first get cellid for each occurrance
@@ -190,7 +184,7 @@ names.each_with_index {|species,z|
       name = occ.AcceptedSpecies
 
       # Assigns realm based on marine value. By default,
-      # a species that is marine and terr will be assigned marine
+      # a species that is marine and terr will be assigned to marine
       # also, a species with no assignment in TA will be assigned terr
       realm = tax_hash[name][1] == "1" ? "marine" : "terrestrial"
       
@@ -198,14 +192,16 @@ names.each_with_index {|species,z|
       when "terrestrial"
         skip = false
         cellid = ModelUtilities.get_cellid(lat, long, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
-        clim_era = year < 1975 ? 1950 : 2000 # assigns clim_era to 1950 for recs < 1975; 2000 for the rest
+        # clim_era = year < 1975 ? 1950 : 2000 # assigns clim_era to 1950 for recs < 1975; 2000 for the rest
+        # note: new worldclim no longer includes 1950, so no distinction here, no longer use "clim_era"
         for_era = EnvUtilities.get_forest_era(year, props['forest_eras'])
         for_val = EnvUtilities.get_value(for_era, props['env_path'], cellid[1], cellid[2])
         if for_val.nil?
           GeneralUtilities.puts_log("nil forest value for " + name + "(lat: " + lat.to_s + ", long: " + long.to_s + ")",log)  
           skip = true
         else 
-          uniq_val = cellid[0].to_s + "_&_" + clim_era.to_s + "_&_" + for_val.to_s # defines a uniq val by cellid, clim_era and forest value for deleting duplicates
+          #uniq_val = cellid[0].to_s + "_&_" + clim_era.to_s + "_&_" + for_val.to_s # defines a uniq val by cellid, clim_era and forest value for deleting duplicates
+          uniq_val = cellid[0].to_s + "_&_" + for_val.to_s # NEW defines a uniq val by cellid, and forest value for deleting duplicates
         end  
         # i[1] shows terr, marine; i[1] = [0,1] > mar; [1,1] > terr, mar; [1,0] > terr
       when "marine"
@@ -224,11 +220,7 @@ names.each_with_index {|species,z|
   else
     #msg = i.acceptedspecies + ": Not enough records to model (" + occ_array.size.to_s + " records total)"
   end
-
-  perc = ((z + 1).to_f/names_size.to_f) * 100
-  progress = GeneralUtilities.get_progress(old_perc,perc)
-  print progress if (progress.nil? == false)
-  old_perc = perc
+  old_perc = GeneralUtilities.print_progress(z,names_size,old_perc)
 }
 
 #
@@ -248,13 +240,19 @@ for i in (0..final_spp.size - 1) do
   GeneralUtilities.puts_log(final_spp[i][0][2].AcceptedSpecies + " (" + final_spp[i].size.to_s + ")",log)
 end
 
+
+## HERE
+## TO DO: CHECK BACKGROOUND ROUTINE
+## UPDATE FOR SINGLE CLIM SCEN
+
+
 #
 # STEP 6:
 # Create one terr and one marine background SWD for use in all MaxEnt runs in this session
 # TO DO: Need marine background SWD also? Yes but simple derivation, random within entire area
 ##
 if props['use_existing_background']['value'] == false # create new background
-  msg = props['marine'] == true ? "climate, climate/forest, and marine" : "climate and climate/forest" 
+  msg = props['marine'] == true ? "climate/forest, and marine" : "climate/forest" 
   GeneralUtilities.puts_log("Creating background SWDs for " + msg + " scenarios...", log)
   backfiles = ModelUtilities.create_background_swd(years, mask, props)
   mar_backfile = true # allows no marine models 
@@ -597,15 +595,6 @@ end #each species
 # 5) Delete bash scripts and any other temp/extraneous files TO DO (see above, del. temp training)
 # especially delete training models to save space
 
-#
-# Replaces production models table with results of model runs
-## Note: This is a change to the production database and server; may want to be careful as this will
-## throw existing users off. Also may require restarting tomcat for changes to work online
-if props['replace_ascii_db']
-  final_bash = DbUtilities.run_ascii_table_bash(props, db)
-  GeneralUtilities.puts_log("Ascii model database table copied ok: " + final_bash.to_s, log)
-end
-
 # chown files created during run
 if props['chown']
   GeneralUtilities.puts_log("Changing model ownership...", log)
@@ -630,7 +619,7 @@ if props['move_to_tomcat']
     if File.directory?(f)
       FileUtils.mkdir_p(props['models_path'] + f.sub(props['outputdir'],""))
     else
-      if props['links'] # copy links
+      if props['links'] # copy links to files only
         FileUtils.ln_s(f, props['models_path'] + f.sub(props['outputdir'], ""), :force => true)
       else # copy full files
         FileUtils.cp_r props['outputdir'] + '/.', props['models_path']

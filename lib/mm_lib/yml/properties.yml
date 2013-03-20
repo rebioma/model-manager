@@ -16,11 +16,11 @@ replace_ascii_db: true
 
 ## Mask and background properties
 # read and write mask to ascii: this is a convenience and can save time if nothing else changes
-mask_write: false
-mask_read: true
+mask_write: true
+mask_read: false
 mask_path: "/home/tomay/mm/masks/"  
-mask_file: "mask_2013-01-31_15:08:02_-0800.asc"
-years_file: "years_2013-01-31_15:08:05_-0800.csv"
+mask_file: ""
+years_file: ""
 read_marine_ascii_mask_location: "/home/tomay/mm/training/mask/marine_mask.asc"
 #write_mask_path: "/home/rebioma/mm/mask/"
 use_existing_background:
@@ -39,25 +39,25 @@ trainingdir: "/home/tomay/mm/training/"
 #Final location for output from model_manager; see below for tomcat path
 outputdir: "/home/tomay/mm/output/" 
 
+## Run properties
+# Mask run types for testing or production:
+# 0 = Regular full production mask, 1 = smaller mask for testing, 2 = very small test mask
+mask_run_type: 0
+# Record run types for testing or production:
+# 0 = Regular full production run with reviewed => true, 1 = single species
+records_run_type: 1
+
 ## Post-procesing properties to change ownership and move results
-chown: true
+chown: false
 owner_uid: 1000
 owner_uid2: 1001
 #final location on tomcat
 models_path: "/home/tomcat/tomcat6/webapps/test/ModelOutput/"
 #if true copy (as symbolic links) files to final location specified above
-move_to_tomcat: true
+move_to_tomcat: false
 links: true
 # if true delete existing models on tomcat. Note: only runs if move_to_tomcat == true 
 delete_old_tomcat: true
-
-## Test properties
-# Mask run types for testing:
-# 0 = Regular full mask, 1 = smaller mask, 2 = very small test mask
-mask_run_type: 0
-# Record run types for testing:
-# 0 = Regular full run with reviewed => true, 1 = single species
-records_run_type: 1
 
 ## Modeling properties
 maxent_path: "/home/tomay/mm/maxent/maxent3.3.3e.jar"
@@ -89,7 +89,8 @@ marine_grid:
   headlines: 6
 
 ## Model scenario properties
-climate_scenarios: "1950_climate_only,2000_climate_only,2080_climate_only"
+#climate_scenarios: "1950_climate_only,2000_climate_only,2080_climate_only"
+climate_scenarios: "current,future_a2a,future_b2a"
 forest_scenarios: "1950_climate_forest,2000_climate_forest,2080a_climate_forest,2080b_climate_forest"
 scen_name1: "climate_only"
 scen_name2: "climate_forest"

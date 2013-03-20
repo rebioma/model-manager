@@ -26,6 +26,13 @@ module GeneralUtilities
     return progress
   end
 
+  def GeneralUtilities.print_progress(i,obj_size,old_perc)
+    perc = ((i + 1).to_f/obj_size.to_f) * 100
+    progress = GeneralUtilities.get_progress(old_perc,perc)
+    print progress if (progress.nil? == false)
+    return perc
+  end
+
   def GeneralUtilities.dash(n)
     dash = "-"
     (1..n).each{ dash += "-" }
@@ -73,12 +80,18 @@ module GeneralUtilities
   end
 
   def GeneralUtilities.eras_proportions(years) # an array of years
-    # eras
+    # old eras
     # 0000-1969 : clim1950_pfc1950 = 1
     # 1970-1975 : clim1950_pfc1970 = 2
     # 1976-1989 : clim2000_pfc1970 = 3
     # 1990-2000 : clim2000_pfc1990 = 4
     # 2000-9999 : clim2000_pfc2000 = 5
+
+    # new eras post worldclim
+    # 0000-1969 : climate2000_pfc1950 = 1
+    # 1970-1989 : climate2000_pfc1970 = 2 (combo of old 2 and 3)
+    # 1990-2000 : climate2000_pfc1990 = 3
+    # 2000-9999 : climate2000_pfc2000 = 4
     eras = []
     years.each {|year|
       era = EnvUtilities.get_era(year)
@@ -216,6 +229,16 @@ module GeneralUtilities
     }
 
     return years
+  end
+
+  def GeneralUtilities.count_species(tax_hash)
+    terr_spp = 0; mar_spp = 0
+    i = 0
+    tax_hash.each {|key|
+      terr_spp += 1 if key.last[0] == "1"
+      mar_spp += 1 if key.last[1] == "1"
+    }
+    return {"terr_spp" => terr_spp, "mar_spp" => mar_spp}
   end
 
 end

@@ -11,20 +11,28 @@ module EnvUtilities
   end
 
   def EnvUtilities.get_era(year)
+    #era = 1 if year < 1970
+    #era = 2 if (year >= 1970 and year < 1975)
+    #era = 3 if (year >= 1975 and year < 1990)
+    #era = 4 if (year >= 1990 and year < 2000)
+    #era = 5 if year >= 2000
     era = 1 if year < 1970
-    era = 2 if (year >= 1970 and year < 1975)
-    era = 3 if (year >= 1975 and year < 1990)
-    era = 4 if (year >= 1990 and year < 2000)
-    era = 5 if year >= 2000
+    era = 2 if (year >= 1970 and year < 1990)
+    era = 3 if (year >= 1990 and year < 2000)
+    era = 4 if year >= 2000
     return era
   end
 
   def EnvUtilities.get_year(era)
+    #year = "<1970" if era == 1
+    #year = "1970-1975" if era == 2
+    #year = "1975-1990" if era == 3
+    #year = "1990-2000" if era == 4
+    #year = ">2000" if era == 5
     year = "<1970" if era == 1
-    year = "1970-1975" if era == 2
-    year = "1975-1990" if era == 3
-    year = "1990-2000" if era == 4
-    year = ">2000" if era == 5
+    year = "1970-1990" if era == 2
+    year = "1990-2000" if era == 3
+    year = ">2000" if era == 4
     return year
   end
 
@@ -50,10 +58,14 @@ module EnvUtilities
   end
 
   def EnvUtilities.get_forest_ascii(era)
+    #ascii = "pfc1950.asc" if era == 1
+    #ascii = "pfc1970.asc" if era == 2 || era == 3
+    #ascii = "pfc1990.asc" if era == 4
+    #ascii = "pfc2000.asc" if era == 5
     ascii = "pfc1950.asc" if era == 1
-    ascii = "pfc1970.asc" if era == 2 || era == 3
-    ascii = "pfc1990.asc" if era == 4
-    ascii = "pfc2000.asc" if era == 5
+    ascii = "pfc1970.asc" if era == 2
+    ascii = "pfc1990.asc" if era == 3
+    ascii = "pfc2000.asc" if era == 4
     return ascii
   end
 
