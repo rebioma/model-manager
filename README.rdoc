@@ -1,32 +1,40 @@
-== Welcome to Rails
+= Model-manager
+== Purpose
+Rails app that uses rake task to produce MaxEnt models from species occurrence data hosted on the REBIOMA data portal:
+link:http://data.rebioma.net
 
-Rails is a web-application framework that includes everything needed to create
-database-backed web applications according to the Model-View-Control pattern.
+== Model specification
+One of the key features of the REBIOMA web portal is its support of species distribution models, created from taxonomically valid and quality reviewed occurrence data. The specification that guided the development of the modeling routines used in REBIOMA can be found here. This is a working document and includes details and discussion on modeling features that have been implemented in REBIOMA, as well as some additional features that have not been implemented yet. 
 
-This pattern splits the view (also called the presentation) into "dumb"
-templates that are primarily responsible for inserting pre-built data in between
-HTML tags. The model contains the "smart" domain objects (such as Account,
-Product, Person, Post) that holds all the business logic and knows how to
-persist themselves to a database. The controller handles the incoming requests
-(such as Save New Account, Update Product, Show Post) by manipulating the model
-and directing data to the view.
+To summarize, species distribution models are produced only from valid, quality reviewed occurrence records. MaxEnt is used to produce continuous distribution models from the occurrence records and environmental data for several eras: past (1950), current (2000), and future (2080). In constructing training data, we attempt to correct for both sample and era bias. The models are trained, and results are subjected to statistical validation. Only models that pass this validation step are projected to the eras listed above. 
 
-In Rails, the model is handled by what's called an object-relational mapping
-layer entitled Active Record. This layer allows you to present the data from
-database rows as objects and embellish these data objects with business logic
-methods. You can read more about Active Record in
-link:files/vendor/rails/activerecord/README.html.
+The main steps in the modeling process are as follows:
+1. Initial setup
+From all occurrences, select species with at least 8 reliably reviewed, non-duplicate records
 
-The controller and view are handled by the Action Pack, which handles both
-layers by its two parts: Action View and Action Controller. These two layers
-are bundled in a single package due to their heavy interdependence. This is
-unlike the relationship between the Active Record and Action Pack that is much
-more separate. Each of these packages can be used independently outside of
-Rails. You can read more about Action Pack in
-link:files/vendor/rails/actionpack/README.html.
+For each species occurrence, extract and save appropriate climate and forest cover values in a sample file under two scenarios: Climate only, and Climate plus forest.
 
+Create background sample files for each species scenario consisting of 10,000 points, with the following constraints: Select 10,000 points randomly from within sampled cells (i.e. a “mask” of all sampled cells for all species) to correct for spatial sampling bias. Selecting background data in the same proportion per era as it was collected to correct for temporal sample bias.
+2. Model training
+The next step is to run Maxent with replicates. We do not project the models at this stage. Run either 4 or 10 replicates to evaluate model depending on the total number of samples. If total samples are > 8 but < 20, run 4 replicates. If samples are >= 20, run 10 replicates. For every species, we now have two potential models, one including climate and forest cover variables, one with climate only.
 
-== Getting Started
+3. Model evaluation
+For a given species, if the mean training AUC minus standard error (SE) > 0.5 (for the 4 or 10 models produced by cross validation), then we produce (“project”) the full models using all the samples. 
+
+4. Produce full models
+If the species passes validation, then produce the model using 100% of the data (no cross-validation). This step produces the lambdas that we will use in projection.
+
+5. Full set of models to project:
+For each model, select the correct “lambda” scenario (climate only scenario, or climate plus  forest scenario), and project onto the matching climate layers, and forest (if relevant) for past, present and future climate. 
+1950 distribution, climate only
+1950 distribution including climate and forest cover
+2000 distribution, climate only
+2000 distribution including climate and forest cover
+2080 distribution, climate only
+2080 distribution including climate and forest cover (“conservative”, where 2080 forest cover = 2005 forest cover)
+2080 distribution including climate and forest cover (“dire”, where 2080 forest cover remains in protected areas only)
+
+== Installation
 
 1. At the command prompt, create a new Rails application:
        <tt>rails new myapp</tt> (where <tt>myapp</tt> is the application name)
