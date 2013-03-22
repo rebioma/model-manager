@@ -4,35 +4,29 @@ Rails app that uses rake task to produce MaxEnt models from species occurrence d
 link:http://data.rebioma.net
 
 == Model specification
-One of the key features of the REBIOMA web portal is its support of species distribution models, created from taxonomically valid and quality reviewed occurrence data. The specification that guided the development of the modeling routines used in REBIOMA can be found here. This is a working document and includes details and discussion on modeling features that have been implemented in REBIOMA, as well as some additional features that have not been implemented yet. 
+One of the key features of the REBIOMA web portal is its support of species distribution models, created from taxonomically valid and quality reviewed occurrence data. Additional details are in {this document}[link:https://docs.google.com/file/d/0B0olImFXGNMnNWZkZDdmMTAtNTM4NC00ZGE0LTg5NmUtZGMyM2FiNzBlMzE2/edit?usp=sharing]. This is a working document that shows details of the first implementation of the modeling routines, and includes modeling features that have been implemented in REBIOMA, and features that have not yet been implemented. The latest version has been updated to create models from IPCC 4th assessment GCM data.
 
-To summarize, species distribution models are produced only from valid, quality reviewed occurrence records. MaxEnt is used to produce continuous distribution models from the occurrence records and environmental data for several eras: past (1950), current (2000), and future (2080). In constructing training data, we attempt to correct for both sample and era bias. The models are trained, and results are subjected to statistical validation. Only models that pass this validation step are projected to the eras listed above. 
+To summarize, species distribution models are produced only from valid, quality reviewed occurrence records. We use MaxEnt[link:http://www.cs.princeton.edu/~schapire/maxent/] to produce continuous distribution models from the occurrence records and environmental data for several eras and scenarios: present (1950-2000), and future (2080-2100 under a2a and b2a future climate "story-lines"). In constructing training data, we correct for both sample and era bias. The models are trained, and results are subjected to statistical validation. Only models that pass this validation step are projected to the eras and scenarios listed above. 
 
 The main steps in the modeling process are as follows:
-1. Initial setup
-From all occurrences, select species with at least 8 reliably reviewed, non-duplicate records
+1. Setup. From all occurrences, select species with at least 8 reliably reviewed, non-duplicate records. For each species occurrence, extract and save appropriate climate and forest cover values. Create background sample files for each species scenario consisting of 10,000 points, with the following constraints: Select 10,000 points randomly from within sampled cells (i.e. a “mask” of all sampled cells for all species) to correct for spatial sampling bias. Selecting background data in the same proportion per era as it was collected to correct for temporal sample bias.
 
-For each species occurrence, extract and save appropriate climate and forest cover values in a sample file under two scenarios: Climate only, and Climate plus forest.
+2. Model training. The next step is to run Maxent with replicates. We do not project the models at this stage. Run either 4 or 10 replicates to evaluate model depending on the total number of samples. If total samples are > 8 but < 20, run 4 replicates. If samples are >= 20, run 10 replicates. For every species, we now have two potential models, one including climate and forest cover variables, one with climate only.
 
-Create background sample files for each species scenario consisting of 10,000 points, with the following constraints: Select 10,000 points randomly from within sampled cells (i.e. a “mask” of all sampled cells for all species) to correct for spatial sampling bias. Selecting background data in the same proportion per era as it was collected to correct for temporal sample bias.
-2. Model training
-The next step is to run Maxent with replicates. We do not project the models at this stage. Run either 4 or 10 replicates to evaluate model depending on the total number of samples. If total samples are > 8 but < 20, run 4 replicates. If samples are >= 20, run 10 replicates. For every species, we now have two potential models, one including climate and forest cover variables, one with climate only.
+3. Model evaluation. For a given species, if the mean training AUC minus standard error (SE) > 0.5 (for the 4 or 10 models produced by cross validation), then we produce (“project”) the full models using all the samples. 
 
-3. Model evaluation
-For a given species, if the mean training AUC minus standard error (SE) > 0.5 (for the 4 or 10 models produced by cross validation), then we produce (“project”) the full models using all the samples. 
+4. Produce full models. If the species passes validation, then produce the model using 100% of the data (no cross-validation). This step produces the lambdas that we will use in projection.
 
-4. Produce full models
-If the species passes validation, then produce the model using 100% of the data (no cross-validation). This step produces the lambdas that we will use in projection.
+5. Full set of models to project. For each model, select the correct “lambda” scenario, and project onto the matching environmental layers present (1950-2000) and future climate (2080-2100) for a2a and b2a scenarios. 
 
-5. Full set of models to project:
-For each model, select the correct “lambda” scenario (climate only scenario, or climate plus  forest scenario), and project onto the matching climate layers, and forest (if relevant) for past, present and future climate. 
-1950 distribution, climate only
-1950 distribution including climate and forest cover
-2000 distribution, climate only
-2000 distribution including climate and forest cover
-2080 distribution, climate only
-2080 distribution including climate and forest cover (“conservative”, where 2080 forest cover = 2005 forest cover)
-2080 distribution including climate and forest cover (“dire”, where 2080 forest cover remains in protected areas only)
+For each species this results in three distribution projections: 
+- Present climate and forest cover
+- Future under a2a scenario and predicted deforestation
+- Future under b2a scenario and predicted deforestation
+
+== Notes on the code here
+
+Unfortunately this is not general purpose code, it is highly customized to our purposes and platform for production in this one particular application. Over time, we will try to make this more organized and generic so that it is more easily applicable elsewhere. 
 
 == Installation
 
