@@ -115,137 +115,69 @@ module ModelUtilities
   end
 
   #
-  # Create terrestrial background swd for two scenarios
-  #
-  def ModelUtilities.create_background_swd(years, mask, props)
-    clim1950 = props['clim_era_layers'][1950].split(",")
-    clim2000 = props['clim_era_layers'][2000].split(",")
-    files = [props['trainingdir'] + props['scen_name1'] + "_background.swd",props['trainingdir'] + props['scen_name2'] + "_background.swd"] #,props['trainingdir'] + "background_" + props['scen_name2'] + "_swd_LOG.csv"]
-    backfile = File.new(files[0], "w") # No forest background swd
-    backfile2 = File.new(files[1], "w") # With forest background swd
-    #backlog2 = File.new(files[2], "w")
-
+  # Create  background swd for marine or terrestrial scenarios
+  # 
+  def ModelUtilities.create_background_swd(years, mask, layers, props, filename, marine)
+    env_layers = layers.split(",")
+    backfile = File.new(filename, "w")
     head = []
     head << "name" << "longitude" << "latitude"
-    clim1950.each {|h|
-      head << h.sub("_50.asc","")
-      }
+    env_layers.each {|h| head << h }
+    head << "pfc" if marine == false
     backfile.puts(head.join(","))
-    head << "pfc"
-    backfile2.puts(head.join(","))
-    # OLD head << "year" << "era" << "prop[1]" << "type"
-    head << "year" << "era" << "prop[1]"
-    #backlog2.puts(head.join(","))
-    proportions = GeneralUtilities.eras_proportions(years)
-    # To check that proportions sum to 1.0:
-    # a = 0; proportions.each{|b| a = a + b[1]}; puts a
-    #puts proportions
-
-    proportions_size = proportions.size
+    # calculate proportions of years per era for terrestrial background
+    proportions = GeneralUtilities.eras_proportions(years) if marine == false
     old_perc = 0
-    proportions.each_with_index{|prop, p| #iterate through each year in the proportion it was sampled
-      count = 1
-      # limit is the number of samples times the proportion
-      # multiplied across proportions, this totals the n samples
-      limit = (prop[1].to_f * props['background_samples'].to_f).round
-      limit = 1 if limit == 0
-      # limit2 is number of samples in the mask times the era proportion
-      # only used in original conception, where samples are taken randomly under mask until count of mask exceeded, then taken randomly anywhere
-      # limit2 = (prop[1].to_f * mask.size.to_f).round + 1
-      (0..(limit - 1)).each do 
-        line = []
-        # ex. mask = [ [[1],["occ"]], [[2],["occ"]], [[3],["occ"]] ]
-        # New method, does not take into account mask size. Background selected ONLY from mask regardless
+    case marine
+    when false # terr
+      proportions.each_with_index{|prop, p| #iterate through each year in the proportion it was sampled
+        # limit is the number of samples times the proportion
+        # multiplied across proportions, this totals the n samples
+        limit = (prop[1].to_f * props['background_samples'].to_f).round
+        limit = 1 if limit == 0
+        (0..(limit - 1)).each do 
+          occ = mask[rand(mask.size)][1] # Gets the occurrence part of the mask array
+          cellid = ModelUtilities.get_cellid(occ.DecimalLatitude, occ.DecimalLongitude, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
+          era = prop[0]
+          line, nodata = EnvUtilities.get_line(env_layers, marine, props, occ.DecimalLongitude, occ.DecimalLatitude, cellid, era)
+          redo if nodata == true # if nodata anywhere in line don't write line, don't inc counter, redo random draw
+          backfile.puts(line.join(",")) 
+        end
+        old_perc = GeneralUtilities.print_progress(p,proportions.size,old_perc)
+
+      }
+    when true # marine
+      (0..(props['background_samples'] - 1)).each_with_index do |n, p|
         occ = mask[rand(mask.size)][1] # Gets the occurrence part of the mask array
-        # Old method, background initially selected under mask, then randomly after limit2
-        #count <= limit2 ? occ = mask[rand(mask.size)][1] : occ = ModelUtilities.get_random_occurrence(props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['cell'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['for_era_layers'][1950], props['env_path'], props['terr_grid']['headlines']) # ternary choice get vals from masked cells, from random when mask cells "used up"
-        # UNCOMMENT to select all background randomly (without consideration of sample mask)
-        #occ = ModelUtilities.get_random_occurrence(props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['cell'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['for_era_layers'][1950], props['env_path'], props['terr_grid']['headlines'])
-
-        lat = occ.DecimalLatitude
-        long = occ.DecimalLongitude
-        cellid = ModelUtilities.get_cellid(lat, long, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
-
-        line << "background" << long << lat
-        era = prop[0]
-        clims = era < 3 ? clim1950 : clim2000 # assigns clim_era to 1950 for recs < 1975; 2000 for the rest
-        
-        # lookup clim values
-        nodata = false
-        clims.each {|clayer|
-          aval = EnvUtilities.get_value(clayer, props['env_path'], cellid[1], cellid[2])
-          line << aval # Note: aval is returned as string with 7 decimal places
-          nodata = true if (aval == "-9999.0000000" or aval == nil)
-        }
-        redo if nodata == true # if nodata anywhere in line don't write line, don't inc counter, redo random draw
-        backfile.puts(line.join(",")) # No forest
-        for_era = EnvUtilities.get_forest_ascii(era)
-        fval = EnvUtilities.get_value(for_era, props['env_path'], cellid[1], cellid[2])
-        line << fval
-        backfile2.puts(line.join(",")) # plus forest for forest background scenario
-        year = EnvUtilities.get_year(era)
-        # old check on mask/random limit
-        #line << year << era << prop[1] << (count <= limit2 ? "mask" : "random")
-        #line << year << era << prop[1]
-        #backlog2.puts(line.join(","))
-        count += 1
+        cellid = ModelUtilities.get_cellid(occ.DecimalLatitude, occ.DecimalLongitude, props['marine_grid']['cell'], props['marine_grid']['xll'], props['marine_grid']['yll'], props['marine_grid']['nrows'], props['marine_grid']['ncols'], props['marine_grid']['headlines'])
+        line, nodata = ModelUtilities.get_line(env_layers, marine, props, occ.DecimalLongitude, occ.DecimalLatitude, cellid, nil)
+        redo if nodata # if nodata anywhere in line don't write line, don't inc counter, redo random draw
+        backfile.puts(line.join(",")) 
+        old_perc = GeneralUtilities.print_progress(p,props['background_samples'],old_perc)
       end
-      perc = ((p + 1).to_f/proportions_size.to_f) * 100
-      progress = GeneralUtilities.get_progress(old_perc,perc)
-      print progress if progress.nil? == false
-      old_perc = perc
-    }
-    backfile.flush
-    backfile2.flush
-    backfile.close
-    backfile2.close
-    #backlog2.flush
-    #backlog2.close
-    return files
+    end
+    GeneralUtilities.flush_and_close([backfile])
+    return filename
   end
 
-  def ModelUtilities.create_marine_background_swd(marine_mask, props)
-    marlayers = props['marine_layers'].split(",")
-    backfile = File.new(props['trainingdir'] + "background_marine.swd", "w") # marine background file
-    head = []
-    head << "name" << "longitude" << "latitude"
-    marlayers.each {|h|
-      head << h
-      }
-    backfile.puts(head.join(",")) # writes header to output
-    old_perc = 0
-    (0..(props['background_samples'] - 1)).each_with_index do |n, p|
-      line = []
-      # ex. mask = [ [[1],["occ"]], [[2],["occ"]], [[3],["occ"]] ]
-      occ = marine_mask[rand(marine_mask.size)][1] # Gets the occurrence part of the mask array
-      # UNCOMMENT to select all background randomly (without consideration of sample mask)
-      #occ = ModelUtilities.get_random_occurrence(props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['cell'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['for_era_layers'][1950], props['env_path'], props['terr_grid']['headlines'])
-
-      lat = occ.DecimalLatitude
-      long = occ.DecimalLongitude
-      cellid = ModelUtilities.get_cellid(lat, long, props['marine_grid']['cell'], props['marine_grid']['xll'], props['marine_grid']['yll'], props['marine_grid']['nrows'], props['marine_grid']['ncols'], props['marine_grid']['headlines'])
-
-      line << "background" << long << lat
-
-      # lookup clim values
-      nodata = false
-      marlayers.each {|clayer|
-        aval = EnvUtilities.get_value(clayer, props['env_path'], cellid[1], cellid[2])
-        line << aval # Note: aval is returned as string with 7 decimal places
-        nodata = true if (aval == "-9999.0000000" or aval == nil)
-      }
-      redo if nodata == true # if nodata anywhere in line don't write line, don't inc counter, redo random draw
-      backfile.puts(line.join(",")) # No forest
-      perc = ((p + 1).to_f/props['background_samples'].to_f) * 100
-      progress = GeneralUtilities.get_progress(old_perc,perc)
-      print progress if progress.nil? == false
-      old_perc = perc
+  # method to construct one line of background and lookup env values for terr and marine spp
+  def ModelUtilities.get_line(layers, marine, props, long, lat, cellid, era)
+    line = []
+    line << "background" << long << lat
+    # lookup clim values
+    nodata = false
+    layers.each {|layer|
+      ourlayer = marine ? layer : layer.sub(".asc","_2000.asc")
+      aval = EnvUtilities.get_value(ourlayer, props['env_path'], cellid[1], cellid[2])
+      line << aval # Note: aval is returned as string with 7 decimal places
+      nodata = true if (aval.to_i == -9999 or aval == nil)
+    }
+    if marine == false
+      for_era = EnvUtilities.get_forest_ascii(era, props)
+      fval = EnvUtilities.get_value(for_era, props['env_path'], cellid[1], cellid[2])
+      line << fval
     end
-
-    backfile.flush
-    backfile.close
-
-    return backfile
+    return [line, nodata]    
   end
 
   ##

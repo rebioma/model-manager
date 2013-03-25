@@ -19,8 +19,8 @@ replace_ascii_db: true
 mask_write: true
 mask_read: false
 mask_path: "/home/tomay/mm/masks/"  
-mask_file: ""
-years_file: ""
+mask_file: "mask_2013-03-20_14:05:33_-0700.asc"
+years_file: "years_2013-03-20_14:05:38_-0700.csv"
 read_marine_ascii_mask_location: "/home/tomay/mm/training/mask/marine_mask.asc"
 #write_mask_path: "/home/rebioma/mm/mask/"
 use_existing_background:
@@ -32,7 +32,7 @@ use_existing_background:
 ## Storage path properties
 logs: "/home/tomay/rails/model-manager/lib/mm_lib/log/"
 tmp: "/home/tomay/rails/model-manager/tmp/"
-env_path: "/home/tomay/mm/env_layers/ascii_files/"
+env_path: "/home/tomay/mm/env_layers/ascii_ipcc4/"
 taxonomic_authority_path: "/home/tomay/mm/taxonomy_edit.csv" # because of encoding issues deleted all extra cols
 link_path: "/home/tomay/mm/env_layers/ascii_links/"
 trainingdir: "/home/tomay/mm/training/"
@@ -74,10 +74,10 @@ extrapolate: false
 
 ## Ascii grid properties
 terr_grid:
-  ncols: 879
-  nrows: 1648
-  xll: 43.183344973251
-  yll: -25.64166487474
+  ncols: 1102
+  nrows: 1765
+  xll: 42.033344913273
+  yll: -26.408331581392
   cell: 0.0083333337679505
   headlines: 6
 marine_grid:
@@ -92,16 +92,23 @@ marine_grid:
 #climate_scenarios: "1950_climate_only,2000_climate_only,2080_climate_only"
 climate_scenarios: "current,future_a2a,future_b2a"
 forest_scenarios: "1950_climate_forest,2000_climate_forest,2080a_climate_forest,2080b_climate_forest"
-scen_name1: "climate_only"
-scen_name2: "climate_forest"
+#scen_name1: "climate_only"
+#scen_name2: "climate_forest"
+scen_name1: "current_climate_forest"
+clim_scen1: "a2a"
+clim_scen2: "b2a"
 forest_eras: "1950,1970,1990,2000"
-clim_era_layers:
-  1950: "mintemp_50.asc,realmar_50.asc,wbpos_50.asc,etptotal_50.asc,maxtemp_50.asc,realmat_50.asc,wbyear_50.asc,minprec_50.asc,maxprec_50.asc"
-  2000: "mintemp_00.asc,realmar_00.asc,wbpos_00.asc,etptotal_00.asc,maxtemp_00.asc,realmat_00.asc,wbyear_00.asc,minprec_00.asc,maxprec_00.asc"
-  future: "mintemp_2X.asc,realmar_2X.asc,wbpos_2x.asc,etptotal_2X.asc,maxtemp_2X.asc,minprec_2X.asc,realmat_2X.asc,wbyear_2X.asc,maxprec_2X.asc"
+
+#clim_era_layers:
+  # can we just have one set of env layers - see env_layers below? 
+  #1950: "mintemp_50.asc,realmar_50.asc,wbpos_50.asc,etptotal_50.asc,maxtemp_50.asc,realmat_50.asc,wbyear_50.asc,minprec_50.asc,maxprec_50.asc"
+  #2000: "bio1_2000.asc,bio2_2000.asc,bio3_2000.asc,bio4_2000.asc,bio5_2000.asc,bio6_2000.asc,bio7_2000.asc,bio8_2000.asc,bio9_2000.asc,bio10_2000.asc,bio11_2000.asc,bio12_2000.asc,bio13_2000.asc,bio14_2000.asc,bio15_2000.asc,bio16_2000.asc,bio17_2000.asc,bio18_2000.asc,bio19_2000.asc"
+  #2100: "bio1_2100.asc,bio2_2100.asc,bio3_2100.asc,bio4_2100.asc,bio5_2100.asc,bio6_2100.asc,bio7_2100.asc,bio8_2100.asc,bio9_2100.asc,bio10_2100.asc,bio11_2100.asc,bio12_2100.asc,bio13_2100.asc,bio14_2100.asc,bio15_2100.asc,bio16_2100.asc,bio17_2100.asc,bio18_2100.asc,bio19_2100.asc"
+env_layers: "bio1.asc,bio2.asc,bio3.asc,bio4.asc,bio5.asc,bio6.asc,bio7.asc,bio8.asc,bio9.asc,bio10.asc,bio11.asc,bio12.asc,bio13.asc,bio14.asc,bio15.asc,bio16.asc,bio17.asc,bio18.asc,bio19.asc"
 for_era_layers:
-  1950: "pfc1950.asc"
-  1970: "pfc1970.asc"
-  1990: "pfc1990.asc"
-  2000: "pfc2000.asc"
+  1950: "pfc1950_vcf.asc"
+  1970: "pfc1970_vcf.asc"
+  1990: "pfc1990_vcf.asc"
+  2000: "pfc2000_vcf.asc"
+  2100: "pfc2100_vcf.asc"
 marine_layers: "bnt_ird5k.asc,chl_5k.asc,cv_5k.asc,par_5k.asc,reef_perc5k.asc,sal_5k.asc,sst_5k.asc,tide_5k.asc,topex5k_mar.asc,uv_5k.asc,wind_5k.asc"

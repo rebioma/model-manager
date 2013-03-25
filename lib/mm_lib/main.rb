@@ -240,26 +240,20 @@ for i in (0..final_spp.size - 1) do
   GeneralUtilities.puts_log(final_spp[i][0][2].AcceptedSpecies + " (" + final_spp[i].size.to_s + ")",log)
 end
 
-
-## HERE
-## TO DO: CHECK BACKGROOUND ROUTINE
-## UPDATE FOR SINGLE CLIM SCEN
-
-
 #
 # STEP 6:
 # Create one terr and one marine background SWD for use in all MaxEnt runs in this session
-# TO DO: Need marine background SWD also? Yes but simple derivation, random within entire area
+# 
 ##
 if props['use_existing_background']['value'] == false # create new background
-  msg = props['marine'] == true ? "climate/forest, and marine" : "climate/forest" 
+  msg = props['marine'] == true ? "terrestrial and marine" : "terrestrial" 
   GeneralUtilities.puts_log("Creating background SWDs for " + msg + " scenarios...", log)
-  backfiles = ModelUtilities.create_background_swd(years, mask, props)
-  mar_backfile = true # allows no marine models 
+  terr_backfile = ModelUtilities.create_background_swd(years, mask, props, props['env_layers'], props['trainingdir'] + "terr_background.swd", false)
+  mar_backfile = true # allows to continue with no marine models 
   if props['marine'] == true
-    mar_backfile = ModelUtilities.create_marine_background_swd(marine_mask, props)
+    mar_backfile = ModelUtilities.create_marine_background_swd(marine_mask, props, props['marine_layers'], props['trainingdir'] + "marine_background.swd", true)
   end
-  if (backfiles and mar_backfile)
+  if (terr_backfile and mar_backfile)
     GeneralUtilities.puts_log("\nBackground SWDs ok: true",log)
   else
     msg = "Error creating background swd's"
@@ -267,11 +261,15 @@ if props['use_existing_background']['value'] == false # create new background
   end
 else # use existing background files named in properties.yml
   GeneralUtilities.puts_log("Using existing background SWDs from previous run.",log)
-  backfiles = []
-  backfiles << props['use_existing_background']['file1'] #string points to csv file, name assumed to match props['scen1'] below
-  backfiles << props['use_existing_background']['file2'] #string points to csv file, assumed to match props['scen2'] below
+  terr_backfile = []
+  terr_backfile << props['use_existing_background']['file1'] #string points to csv file, name assumed to match props['scen1'] below
+  #backfiles << props['use_existing_background']['file2'] #string points to csv file, assumed to match props['scen2'] below
   mar_backfile = props['use_existing_background']['marine_file'] if props['marine'] == true # string points to marine background swd file
 end
+
+##
+Process.exit
+##
 
 #
 # STEP 6b:

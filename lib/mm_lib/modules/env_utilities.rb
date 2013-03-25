@@ -57,15 +57,15 @@ module EnvUtilities
     return "pfc" + era.to_s + ".asc" # constructs the name of the layer from year
   end
 
-  def EnvUtilities.get_forest_ascii(era)
+  def EnvUtilities.get_forest_ascii(era, props)
     #ascii = "pfc1950.asc" if era == 1
     #ascii = "pfc1970.asc" if era == 2 || era == 3
     #ascii = "pfc1990.asc" if era == 4
     #ascii = "pfc2000.asc" if era == 5
-    ascii = "pfc1950.asc" if era == 1
-    ascii = "pfc1970.asc" if era == 2
-    ascii = "pfc1990.asc" if era == 3
-    ascii = "pfc2000.asc" if era == 4
+    ascii = props["for_era_layers"][1950] if era == 1
+    ascii = props["for_era_layers"][1970] if era == 2
+    ascii = props["for_era_layers"][1990] if era == 3
+    ascii = props["for_era_layers"][2000] if era == 4
     return ascii
   end
 

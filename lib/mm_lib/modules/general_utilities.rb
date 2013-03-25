@@ -80,18 +80,11 @@ module GeneralUtilities
   end
 
   def GeneralUtilities.eras_proportions(years) # an array of years
-    # old eras
-    # 0000-1969 : clim1950_pfc1950 = 1
-    # 1970-1975 : clim1950_pfc1970 = 2
-    # 1976-1989 : clim2000_pfc1970 = 3
-    # 1990-2000 : clim2000_pfc1990 = 4
-    # 2000-9999 : clim2000_pfc2000 = 5
-
-    # new eras post worldclim
-    # 0000-1969 : climate2000_pfc1950 = 1
-    # 1970-1989 : climate2000_pfc1970 = 2 (combo of old 2 and 3)
-    # 1990-2000 : climate2000_pfc1990 = 3
-    # 2000-9999 : climate2000_pfc2000 = 4
+    # new eras post worldclim/ipcc 4
+    # 0000-1969 : climate2000 & pfc1950 = 1
+    # 1970-1989 : climate2000 & pfc1970 = 2 (combo of old 2 and 3)
+    # 1990-2000 : climate2000 & pfc1990 = 3
+    # 2000-9999 : climate2000 & pfc2000 = 4
     eras = []
     years.each {|year|
       era = EnvUtilities.get_era(year)
@@ -239,6 +232,13 @@ module GeneralUtilities
       mar_spp += 1 if key.last[1] == "1"
     }
     return {"terr_spp" => terr_spp, "mar_spp" => mar_spp}
+  end
+
+  def GeneralUtilities.flush_and_close(files)
+    files.each {|f|
+      f.flush
+      f.close
+    }
   end
 
 end
