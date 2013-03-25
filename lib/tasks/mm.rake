@@ -5,10 +5,3 @@ namespace :model_manager do
     ruby "lib/mm_lib/main.rb #{rails}"
   end
 end
-
-desc "test"
-namespace :users do
-  task :list => :environment do
-    puts Occurrence.first
-  end
-end

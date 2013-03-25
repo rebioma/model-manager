@@ -1,6 +1,6 @@
 = Model-manager
 == Purpose
-Rails app that uses rake task to produce MaxEnt models from species occurrence data hosted on the REBIOMA data portal:
+Rails app that uses a {rake task}[link:https://github.com/tomay/model-manager/blob/master/lib/tasks/mm.rake] to produce MaxEnt models from species occurrence data hosted on the REBIOMA data portal:
 link:http://data.rebioma.net
 
 == Model specification
