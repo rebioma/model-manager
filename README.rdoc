@@ -19,7 +19,7 @@ The main steps in the modeling process are as follows:
 
 5. Full set of models to project. For each model, select the correct “lambda” scenario, and project onto the matching environmental layers present (1950-2000) and future climate (2080-2100) for a2a and b2a scenarios. 
 
-For each species this results in three distribution projections: 
+This results in three projections (distribution models) for each modellable species: 
 - Present climate and forest cover
 - Future under a2a scenario and predicted deforestation
 - Future under b2a scenario and predicted deforestation
