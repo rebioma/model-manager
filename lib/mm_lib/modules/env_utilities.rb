@@ -1,6 +1,4 @@
-# To change this template, choose Tools | Templates
-# and open the template in the editor.
-
+# 
 module EnvUtilities
   def EnvUtilities.load_layer(layer)
     layerfile = File.open(layer)
@@ -36,9 +34,10 @@ module EnvUtilities
     return year
   end
 
-  def EnvUtilities.get_forest_era(year, eras)
-    eras2 = eras.split(",")
-    len = eras2.size
+  def EnvUtilities.get_forest_era(year, props)
+    #eras2 = eras.split(",")
+    eras2 = props["forest_eras"].split(",")
+    #len = eras2.size
     era = 0
     eras2.each_with_index do |e, a|
       #puts "in year: " + year.to_s
@@ -54,7 +53,8 @@ module EnvUtilities
       end
     end
     #puts "final era: " + era.to_s
-    return "pfc" + era.to_s + ".asc" # constructs the name of the layer from year
+    #return "pfc" + era.to_s + ".asc" # constructs the name of the layer from year
+    return props["for_era_layers"][era]
   end
 
   def EnvUtilities.get_forest_ascii(era, props)
@@ -70,7 +70,7 @@ module EnvUtilities
   end
 
   def EnvUtilities.get_value(layerfile, env_path, getrow, getcol) #offset built into getrow
-    # Requires bash to run, as we use tail and head to get the line of interest from large file
+    # Requires bash to run, uses tail and head to get the line of interest from large file
     begin
       tailcmd = "tail -n +" + (getrow + 1).to_s + " " + env_path + layerfile + " > " + env_path + "tail.asc"
       headcmd = "head -n 1 " + env_path + "tail.asc" + " > " + env_path + "head.asc"

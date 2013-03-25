@@ -194,7 +194,7 @@ names.each_with_index {|species,z|
         cellid = ModelUtilities.get_cellid(lat, long, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
         # clim_era = year < 1975 ? 1950 : 2000 # assigns clim_era to 1950 for recs < 1975; 2000 for the rest
         # note: new worldclim no longer includes 1950, so no distinction here, no longer use "clim_era"
-        for_era = EnvUtilities.get_forest_era(year, props['forest_eras'])
+        for_era = EnvUtilities.get_forest_era(year, props)
         for_val = EnvUtilities.get_value(for_era, props['env_path'], cellid[1], cellid[2])
         if for_val.nil?
           GeneralUtilities.puts_log("nil forest value for " + name + "(lat: " + lat.to_s + ", long: " + long.to_s + ")",log)  
@@ -248,10 +248,10 @@ end
 if props['use_existing_background']['value'] == false # create new background
   msg = props['marine'] == true ? "terrestrial and marine" : "terrestrial" 
   GeneralUtilities.puts_log("Creating background SWDs for " + msg + " scenarios...", log)
-  terr_backfile = ModelUtilities.create_background_swd(years, mask, props, props['env_layers'], props['trainingdir'] + "terr_background.swd", false)
+  terr_backfile = ModelUtilities.create_background_swd(years, mask, props, props['env_layers'], props['trainingdir'] + "background_terr.swd", false)
   mar_backfile = true # allows to continue with no marine models 
   if props['marine'] == true
-    mar_backfile = ModelUtilities.create_marine_background_swd(marine_mask, props, props['marine_layers'], props['trainingdir'] + "marine_background.swd", true)
+    mar_backfile = ModelUtilities.create_marine_background_swd(marine_mask, props, props['marine_layers'], props['trainingdir'] + "background_marine.swd", true)
   end
   if (terr_backfile and mar_backfile)
     GeneralUtilities.puts_log("\nBackground SWDs ok: true",log)
@@ -266,10 +266,6 @@ else # use existing background files named in properties.yml
   #backfiles << props['use_existing_background']['file2'] #string points to csv file, assumed to match props['scen2'] below
   mar_backfile = props['use_existing_background']['marine_file'] if props['marine'] == true # string points to marine background swd file
 end
-
-##
-Process.exit
-##
 
 #
 # STEP 6b:
@@ -295,11 +291,15 @@ for j in (0..final_spp.size - 1) do #every species
 
   # One sample swd method for terr, another for marine
   realm = tax_hash[final_spp[j][0][2].AcceptedSpecies][1] == "1" ? "marine" : "terrestrial"
-  # TO DO: add messaging here or inside create_swd
   # Notes: marine swd with samples is not really needed here becuase this is not used below
   #        given that there is no marine projection (for now)
-  #        really all that is needed for marine is name,lat,long - could speed this up TO DO, new method
-  files = realm == "marine" ? ModelUtilities.create_marine_sample_swd(final_spp[j],props) : ModelUtilities.create_sample_swd(final_spp[j],props)
+  #files = realm == "marine" ? ModelUtilities.create_marine_sample_swd(final_spp[j],props) : ModelUtilities.create_sample_swd(final_spp[j],props)
+  case realm
+  when "terrestrial"
+    files = ModelUtilities.create_sample_swd(final_spp[j],props,props['env_layers'],false)
+  when "marine"
+    files = ModelUtilities.create_sample_swd(final_spp[j],props,props['marine_layers'],true)  
+  end 
   name = files["name"]
   final_count = files["count"]
   GeneralUtilities.puts_log("Number of records start: " + final_spp[j].size.to_s, log)
@@ -311,11 +311,16 @@ for j in (0..final_spp.size - 1) do #every species
     GeneralUtilities.puts_log("Done sample SWD for species " + name,log)
   end
 
+  ##
+  puts "Process exit"
+  Process.exit
+  ##
+
   #
   # Step 7a. Run Maxent (model training)
   #
   ##
-  climfor_model, climonly_model, marine_model = nil
+  terr_model, marine_model = nil
   GeneralUtilities.puts_log("Starting MaxEnt...",log)
   replicates = (final_count >= props['replicates']['sample_threshold'] ? props['replicates']['reps_above'] : props['replicates']['reps_below'])
   args = ["replicates=" + replicates.to_s, "replicatetype=crossvalidate", "redoifexists", "nowarnings", "novisible", "threads=" + props['threads_arg'].to_s, "extrapolate=" + props['extrapolate'].to_s, "autorun"]

@@ -16,8 +16,8 @@ replace_ascii_db: true
 
 ## Mask and background properties
 # read and write mask to ascii: this is a convenience and can save time if nothing else changes
-mask_write: true
-mask_read: false
+mask_write: false
+mask_read: true
 mask_path: "/home/tomay/mm/masks/"  
 mask_file: "mask_2013-03-20_14:05:33_-0700.asc"
 years_file: "years_2013-03-20_14:05:38_-0700.csv"
@@ -25,8 +25,7 @@ read_marine_ascii_mask_location: "/home/tomay/mm/training/mask/marine_mask.asc"
 #write_mask_path: "/home/rebioma/mm/mask/"
 use_existing_background:
   value: true
-  file1: "/home/tomay/mm/training/climate_only_background.swd"
-  file2: "/home/tomay/mm/training/climate_forest_background.swd"
+  terrestrial_file: "/home/tomay/mm/training/background_terr.swd"
   marine_file: "/home/tomay/mm/training/background_marine.swd"
 
 ## Storage path properties
