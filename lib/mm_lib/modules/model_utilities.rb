@@ -1,6 +1,4 @@
-# To change this template, choose Tools | Templates
-# and open the template in the editor.
-
+#
 module ModelUtilities
 
   def ModelUtilities.count_reviews(in_ary)
@@ -126,7 +124,7 @@ module ModelUtilities
     head << "pfc" if marine == false
     backfile.puts(head.join(","))
     # calculate proportions of years per era for terrestrial background
-    proportions = GeneralUtilities.eras_proportions(years) if marine == false
+    proportions = EnvUtilities.eras_proportions(years) if marine == false
     old_perc = 0
     case marine
     when false # terr
@@ -222,44 +220,8 @@ module ModelUtilities
     return files
   end
 
-  def ModelUtilities.run_maxent(path, background, samples, output, args, mem)
-    #props = YAML.load_file("properties.yml")
-    #puts "java " + mem + " -jar " + path + " environmentallayers=" + background + " samplesfile=" + samples + " outputdirectory=" + output + " " + args.join(" ")
-    javacmd = "java " + mem + " -jar " + path + " environmentallayers=" + background + " samplesfile=" + samples + " outputdirectory=" + output + " " + args.join(" ")
-    success = system(javacmd)
-    return success
-  end
-
-  def ModelUtilities.run_maxent_density(path, mem, lambdas_samples, grids, output, args, density)
-    # lambdas_samples: lambdas if density.Project, samples if density.MaxEnt
-    if density == "density.MaxEnt" # some additional props required
-      output = "outputdirectory=" + output
-      lambdas_samples = "samplesfile=" + lambdas_samples
-      grids = "environmentallayers=" + grids
-    end
-    javacmd = "java " + mem + " -cp " + path + " " + density + " " + lambdas_samples + " " + grids + " " + output + " " + args
-    #puts javacmd
-    success = system(javacmd)
-    return success
-  end
-
-  def ModelUtilities.run_maxent_density_project(path, lambdas, grids, output, mem)
-    #props = YAML.load_file("properties.yml")
-    javacmd = "java " + mem + " -cp " + path + " density.Project " + lambdas + " " + grids + " " + output
-    #puts javacmd
-    success = system(javacmd)
-    return success
-  end
-
-  def ModelUtilities.run_maxent_density_maxent(path, args, output, samples, grids, mem)
-    #java density.MaxEnt autorun redoifexists nowarnings noprefixes responsecurves outputdirectory=/home/tomay/mm/output/Zebrazoma_scopas samplesfile=/home/tomay/mm/training/Zebrazoma_scopas_marine_swd.csv environmentallayers=/home/tomay/mm/ascii_links/marine
-    javacmd = "java " + mem + " -cp " + path + " density.MaxEnt " + args + " " + output + " " + samples + " "  + grids
-    success = system(javacmd)
-    return success
-  end
-
   def ModelUtilities.validate_result(indir, replicates)
-    maxent_result_csv = File.open(indir + "maxentResults.csv", "_")
+    maxent_result_csv = File.open(indir + "maxentResults.csv", "r")
     lines = maxent_result_csv.readlines
     header = lines[0].split(",")
     n = header.index("Training AUC")
@@ -278,6 +240,7 @@ module ModelUtilities
     mean_auc = sum_training_auc / replicates
     validity = mean_auc - standard_error
     v = validity > 0.5 ? true : false
+    maxent_result_csv.close
     return {"validity" => v, "mean_auc" => mean_auc, "standard_error" => standard_error, "value" => validity}
   end
 

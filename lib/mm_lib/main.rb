@@ -7,9 +7,9 @@ require 'zipruby'
 # modules
 require_relative 'modules/model_utilities'
 require_relative 'modules/env_utilities'
-#require_relative 'modules/db_utilities'
 require_relative 'modules/general_utilities'
 require_relative 'modules/csv_writer2'
+require_relative 'modules/maxent'
 
 #
 # SETUP:
@@ -261,8 +261,8 @@ if props['use_existing_background']['value'] == false # create new background
   end
 else # use existing background files named in properties.yml
   GeneralUtilities.puts_log("Using existing background SWDs from previous run.",log)
-  terr_backfile = []
-  terr_backfile << props['use_existing_background']['file1'] #string points to csv file, name assumed to match props['scen1'] below
+  #terr_backfile = []
+  terr_backfile = props['use_existing_background']['terrestrial_file'] #string points to csv file, name assumed to match props['scen1'] below
   #backfiles << props['use_existing_background']['file2'] #string points to csv file, assumed to match props['scen2'] below
   mar_backfile = props['use_existing_background']['marine_file'] if props['marine'] == true # string points to marine background swd file
 end
@@ -311,11 +311,6 @@ for j in (0..final_spp.size - 1) do #every species
     GeneralUtilities.puts_log("Done sample SWD for species " + name,log)
   end
 
-  ##
-  puts "Process exit"
-  Process.exit
-  ##
-
   #
   # Step 7a. Run Maxent (model training)
   #
@@ -324,41 +319,31 @@ for j in (0..final_spp.size - 1) do #every species
   GeneralUtilities.puts_log("Starting MaxEnt...",log)
   replicates = (final_count >= props['replicates']['sample_threshold'] ? props['replicates']['reps_above'] : props['replicates']['reps_below'])
   args = ["replicates=" + replicates.to_s, "replicatetype=crossvalidate", "redoifexists", "nowarnings", "novisible", "threads=" + props['threads_arg'].to_s, "extrapolate=" + props['extrapolate'].to_s, "autorun"]
-  validate = []
+  density = "density.MaxEnt"
+  to_validate = {}
   invalid = true
   case realm
   when "terrestrial"
     output = props['trainingdir'] + name + "_" + props['scen_name1'] + File::SEPARATOR
-    output2 = props['trainingdir'] + name + "_" + props['scen_name2'] + File::SEPARATOR
-    [output, output2].each do |out|
-      FileUtils.rm_rf(out) if FileTest::directory?(out)
-      Dir::mkdir(out)
-    end
+    GeneralUtilities.rm_mkdir(output)
     #Debug# puts "Params: " + props['maxent_path'] + ", " + backfiles[0] + ", " + props['trainingdir'] + name + "_" + props['scen_name1'] + "_swd.csv"  + ", " + output
-    climonly_model = ModelUtilities.run_maxent(props['maxent_path'], backfiles[0], props['trainingdir'] + name + "_" + props['scen_name1'] + "_swd.csv", output, args, props['memory_arg'])
-    climfor_model = ModelUtilities.run_maxent(props['maxent_path'], backfiles[1], props['trainingdir'] + name + "_" + props['scen_name2'] + "_swd.csv", output2, args, props['memory_arg'])
-    if climonly_model
-      GeneralUtilities.puts_log(name + " " + props['scen_name1'] + "_model success: " + climonly_model.to_s,log)
-      validate << {"model" => props['scen_name1'], "output" => output }
+    samples = props['trainingdir'] + name + "_swd.csv"
+    terr_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :samples=>samples, :background=>terr_backfile)
+    if terr_model
+      to_validate["model"] = props['scen_name1']
+      to_validate["output"] = output
       invalid = false
-    else
-      GeneralUtilities.puts_log(name + " " + props['scen_name1'] + "_model success: " + climonly_model.to_s, log)
     end
-    if climfor_model
-      GeneralUtilities.puts_log(name + " " + props['scen_name2'] + "_model success: " + climfor_model.to_s, log)
-      validate << {"model" => props['scen_name2'], "output" => output2 }
-      invalid = false
-    else
-      GeneralUtilities.puts_log(name + " " + props['scen_name2'] + "_model success: " + climonly_model.to_s, log)
-    end
+    GeneralUtilities.puts_log(name + " " + props['scen_name1'] + "_model success: " + terr_model.to_s, log)
   when "marine"
-    output3 = props['trainingdir'] + name + "_marine" + File::SEPARATOR
-    FileUtils.rm_rf(output3) if FileTest::directory?(output3)
-    Dir::mkdir(output3)
-    marine_model = ModelUtilities.run_maxent(props['maxent_path'], mar_backfile, props['trainingdir'] + name + "_" + "marine_swd.csv", output3, args, props['memory_arg'])
+    output = props['trainingdir'] + name + "_marine" + File::SEPARATOR
+    GeneralUtilities.rm_mkdir(output)
+    samples = props['trainingdir'] + name + "_" + "marine_swd.csv"
+    marine_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :samples=>samples, :background=>mar_backfile)
     if marine_model
       GeneralUtilities.puts_log(name + " marine_model success: " + marine_model.to_s, log)
-      validate << {"model" => "marine", "output" => output3 }
+      to_validate["model"] = "marine"
+      to_validate["output"] = output
       invalid = false
     end
   end
@@ -367,70 +352,65 @@ for j in (0..final_spp.size - 1) do #every species
   # Step 7b. Validate Maxent result (terr and marine)
   #
   ##
-  validated = []
-  validate.each {|model_result|
-    v = {}
-    v = ModelUtilities.validate_result(model_result["output"], replicates)
-    v["model"] = model_result["model"]
-    validated << v
-  }
+  validated = ModelUtilities.validate_result(to_validate["output"], replicates)
+  validated["model"] = to_validate["model"]
 
-  validated.each {|v|
-    if v == [] # Some big maxent error here, expected information not found in maxentResults.csv
-      v["validity"] = false # force to false
-      invalid = true
-    else
-      GeneralUtilities.puts_log(GeneralUtilities.dash(80) + "\n" + name + " " + v["model"] + " VALIDITY TEST:" + "\n" + GeneralUtilities.dash(80), log)
-      GeneralUtilities.puts_log("Mean AUC: " + v["mean_auc"].to_s + "\nStandard error: " + v["standard_error"].to_s + "\nValidity: " + v["value"].to_s, log)
-      GeneralUtilities.puts_log(name + " " + v["model"] + " valid: " + v["validity"].to_s + "\n" + GeneralUtilities.dash(80), log)
-    end
-  }
+  if validated == [] # Some big maxent error here, expected information not found in maxentResults.csv
+    validated["validity"] = false # force to false
+    invalid = true
+  else
+    GeneralUtilities.puts_log(GeneralUtilities.dash(80) + "\n" + name + " " + validated["model"] + " VALIDITY TEST:" + "\n" + GeneralUtilities.dash(80), log)
+    GeneralUtilities.puts_log("Mean AUC: " + validated["mean_auc"].to_s + "\nStandard error: " + validated["standard_error"].to_s + "\nValidity: " + validated["value"].to_s, log)
+    GeneralUtilities.puts_log(name + " " + validated["model"] + " valid: " + validated["validity"].to_s + "\n" + GeneralUtilities.dash(80), log)
+  end
 
   if invalid # NO valid models
-    GeneralUtilities.puts_log("NO valid models for " + name + "...", log)
-  else # At least one valid model
+    GeneralUtilities.puts_log("NO valid model for " + name + "...", log)
+  else # a valid model
     #
     # Step 7c. Create full Maxent model(s) if at least one valid result
     #          Note: Not producing full marine model now, because cannot project
     #          to grids that are the same that produced the lambda; rather, for marine we
     #          use Maxent.density.MaxEnt to "project" to grids without replication
     ##
-    validated.each do |v|
-      next if v == nil or v["validity"] == false
-      if v["validity"] # true=valid, then create full climonly model
-        args = ["redoifexists", "nowarnings", "novisible", "threads=" + props['threads_arg'].to_s, "extrapolate=" + props['extrapolate'].to_s, "autorun"]
-        output = props['trainingdir'] + name + "_" + v["model"] + "_full" + File::SEPARATOR
-        FileUtils.rm_rf(output) if FileTest::directory?(output)
-        Dir::mkdir(output) unless v["model"] == "marine"
-        case v["model"]
-        when props['scen_name1']
-          background_file = backfiles[0]
-        when props['scen_name2']
-          background_file = backfiles[1]
-        when "marine"
-          background_file = mar_backfile
-          next # can change this later if we end up with multiple marine scenarioss to project to
+
+    next if validated == nil or validated["validity"] == false # necessary??
+    if validated["validity"] # true=valid, then create full model
+      output = props['trainingdir'] + name + "_" + validated["model"] + "_full" + File::SEPARATOR
+      GeneralUtilities.rm_mkdir(output)
+      case validated["model"]
+      when props['scen_name1']
+        background_file = terr_backfile
+        samples = props['trainingdir'] + name + "_swd.csv"
+      when "marine"
+        background_file = mar_backfile
+        samples = props['trainingdir'] + name + "_" + validated["model"] + "_swd.csv"
+        next # can change this later if we end up with multiple marine scenarioss to project to
                # for now, next just skips any marine models. Full model is produced in "projection" below
-        end
-        #samples = props['trainingdir'] + name + "_" + v["model"].sub + "_swd.csv"
-        #puts samples
-        s = ModelUtilities.run_maxent(props['maxent_path'], background_file, props['trainingdir'] + name + "_" + v["model"] + "_swd.csv", output, args, props['memory_arg'])
-        GeneralUtilities.puts_log(name + " " + v["model"] + "_full FULL model success: " + s.to_s, log)
-      else
+      end
+      #samples = props['trainingdir'] + name + "_" + v["model"].sub + "_swd.csv"
+      #puts samples
+      args = ["redoifexists", "nowarnings", "novisible", "threads=" + props['threads_arg'].to_s, "extrapolate=" + props['extrapolate'].to_s, "autorun"]
+      full_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :samples=>samples, :background=>background_file)
+      GeneralUtilities.puts_log(name + " " + validated["model"] + "_full FULL model success: " + full_model.to_s, log)
+    else
         # TO DO Delete model testing stuff -- to save space
         # here or at end, after copy html etc.?
-      end
     end
   end # at least one valid model
 
+#######################
+  puts "Process exit"
+  Process.exit
+#######################
+  
   #
   # Run Maxent projections from full model lambdas
   #
   ##
   GeneralUtilities.puts_log("Projecting...", log)
   newdir = props['outputdir'] + name
-  FileUtils.rm_rf(newdir) if FileTest::directory?(newdir)
-  Dir::mkdir(newdir)
+  GeneralUtilities.rm_mkdir(newdir)
 
   climate_scenarios = climonly_model == true ? props['climate_scenarios'].split(",") : nil
   forest_scenarios = climfor_model == true ? props['forest_scenarios'].split(",") : nil

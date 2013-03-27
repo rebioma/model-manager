@@ -9,11 +9,6 @@ module EnvUtilities
   end
 
   def EnvUtilities.get_era(year)
-    #era = 1 if year < 1970
-    #era = 2 if (year >= 1970 and year < 1975)
-    #era = 3 if (year >= 1975 and year < 1990)
-    #era = 4 if (year >= 1990 and year < 2000)
-    #era = 5 if year >= 2000
     era = 1 if year < 1970
     era = 2 if (year >= 1970 and year < 1990)
     era = 3 if (year >= 1990 and year < 2000)
@@ -22,16 +17,27 @@ module EnvUtilities
   end
 
   def EnvUtilities.get_year(era)
-    #year = "<1970" if era == 1
-    #year = "1970-1975" if era == 2
-    #year = "1975-1990" if era == 3
-    #year = "1990-2000" if era == 4
-    #year = ">2000" if era == 5
     year = "<1970" if era == 1
     year = "1970-1990" if era == 2
     year = "1990-2000" if era == 3
     year = ">2000" if era == 4
     return year
+  end
+
+  def EnvUtilities.eras_proportions(years) # an array of years
+    # new eras post worldclim/ipcc 4
+    # 0000-1969 : climate2000 & pfc1950 = 1
+    # 1970-1989 : climate2000 & pfc1970 = 2 (combo of old 2 and 3)
+    # 1990-2000 : climate2000 & pfc1990 = 3
+    # 2000-9999 : climate2000 & pfc2000 = 4
+    eras = []
+    years.each {|year|
+      era = EnvUtilities.get_era(year)
+      eras << era
+    }
+    eras_props = []
+    eras.uniq.sort_by{|x|eras.grep(x)}.each{|x| eras_props << [x, eras.grep(x).size.to_f/eras.size.to_f]}
+    return eras_props # an array with ?
   end
 
   def EnvUtilities.get_forest_era(year, props)

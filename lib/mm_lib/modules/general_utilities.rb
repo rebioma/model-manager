@@ -7,6 +7,11 @@ module GeneralUtilities
     log.info msg
   end
 
+  def GeneralUtilities.rm_mkdir(output)
+    FileUtils.rm_rf(output) if FileTest::directory?(output)
+    Dir::mkdir(output)
+  end
+
   def GeneralUtilities.get_progress(min,max)
     prog = []
     a = min.to_i
@@ -67,49 +72,6 @@ module GeneralUtilities
     Math.sqrt(variance(population))
   end
 
-  def GeneralUtilities.years_proportions_with_samples(years, back_samples) # an array of years, a number of background samples
-    years_props = []
-    years.uniq.sort_by{|x|years.grep(x)}.each{|x| years_props << [x, (back_samples * (years.grep(x).size.to_f/years.size.to_f)).round]}
-    return years_props
-  end
-
-  def GeneralUtilities.years_proportions(years) # an array of years
-    years_props = []
-    years.uniq.sort_by{|x|years.grep(x)}.each{|x| years_props << [x, years.grep(x).size.to_f/years.size.to_f]}
-    return years_props
-  end
-
-  def GeneralUtilities.eras_proportions(years) # an array of years
-    # new eras post worldclim/ipcc 4
-    # 0000-1969 : climate2000 & pfc1950 = 1
-    # 1970-1989 : climate2000 & pfc1970 = 2 (combo of old 2 and 3)
-    # 1990-2000 : climate2000 & pfc1990 = 3
-    # 2000-9999 : climate2000 & pfc2000 = 4
-    eras = []
-    years.each {|year|
-      era = EnvUtilities.get_era(year)
-      eras << era
-    }
-    eras_props = []
-    eras.uniq.sort_by{|x|eras.grep(x)}.each{|x| eras_props << [x, eras.grep(x).size.to_f/eras.size.to_f]}
-
-    return eras_props # an array with ?
-  end
-
-  def GeneralUtilities.years_proportions2(years) # an array of years
-    eras = []
-    years_eras = []
-    years.each {|year|
-      era = EnvUtilities.get_era(year)
-      eras << era
-      years_eras << [year, era]
-    }
-    eras_props = []
-    eras.uniq.sort_by{|x|eras.grep(x)}.each{|x| eras_props << [x, eras.grep(x).size.to_f/eras.size.to_f]}
-
-    return years_eras.sort_by{|a| a[0]}, eras_props
-  end
-
   def GeneralUtilities.get_month_name(month)
     month_name = "January" if month == 1
     month_name = "February" if month == 2
@@ -123,7 +85,6 @@ module GeneralUtilities
     month_name = "October" if month == 10
     month_name = "November" if month == 11
     month_name = "December" if month == 12
-
     return month_name
   end
 
