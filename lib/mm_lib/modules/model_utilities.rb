@@ -1,22 +1,5 @@
-#
+# module with utilities relating to models
 module ModelUtilities
-
-  def ModelUtilities.count_reviews(in_ary)
-    # "Reviewed" in occurrences seems to refer to recs with sum positive review. Here checking on actual reviews in review table to make sure they sum to > 8. This is not probably necessary, but a safer way of getting only positively reviewed occurrences
-    t = 0
-    in_ary.each {|o| # in_ary here is an array of occurrences for one species, joined to reviews
-      for z in 0..(o.reviews.count - 1) do # interesting that reviews association carries through
-        if o.reviews[z].review == true
-          t = t + 1 #counts number of true reviews for this species
-                    #TO DO: What about multiple reviews (by diff reviewers)
-                    # for ex you could have 1 occ with 8 pos reviews, what happens then?
-                    # we want sum pos reviewed recs = 8 not sure that's what this does
-        end
-      end
-    }
-    return t
-  end
-
   # Given an array of years and cellids [ [24,1980], [24,2001], [380,2008], [2345,2010] ]
   # removes duplicates by era and cellid combination, and returns list of years
   def ModelUtilities.remove_years_by_cellid(cellids_years)
@@ -120,7 +103,7 @@ module ModelUtilities
     backfile = File.new(filename, "w")
     head = []
     head << "name" << "longitude" << "latitude"
-    env_layers.each {|h| head << h }
+    env_layers.each {|h| head << h.sub(".asc","")}
     head << "pfc" if marine == false
     backfile.puts(head.join(","))
     # calculate proportions of years per era for terrestrial background
@@ -187,12 +170,10 @@ module ModelUtilities
     # Setup and open files
     env_layers = layers.split(",")
     occ_array, priv_array, head = [], [], [] # to hold occurrences for csv output, and a counter for private records
+    name = (species[0][2].AcceptedSpecies).split(" ").join("_") # get name from first record
 
-    names = (species[0][2].AcceptedSpecies).split(" ") # get name from first record
-    name = names.join("_") # puts name into format for SWD
-    msg = "Starting model for " + name; puts msg#; log.info msg
     head << "name" << "longitude" << "latitude"
-    env_layers.each {|layer_name| head << layer_name }
+    env_layers.each {|layer_name| head << layer_name.sub(".asc","") }
     head << "pfc" if marine == false
     
     fileid = marine ? "_marine_swd.csv" : "_swd.csv"
@@ -290,34 +271,49 @@ module ModelUtilities
     return tax_hash  
   end
 
-  def ModelUtilities.lookup_realm(names, taxonomy)
-    realms = {}
-    names_realms = []
-    accepted_count = 0
-    marine_count = 0
-    terr_count = 0
-    taxonomic_authority = File.open(taxonomy,"r")
-    ## read realms to memory
-    taxonomic_authority.each_with_index{|line,i|
-      vals = line.strip.split(",")
-      if i == 0 # header
-        vals.each_with_index{|val, count|
-          accepted_count = count if val == "AcceptedSpecies"
-          marine_count = count if val == "IsMarine"
-          terr_count = count if val == "IsTerrestrial"
-        }
-      else # every line after header
-        realms[vals[accepted_count]] = [vals[terr_count],vals[marine_count]]
-      end
-    }
-    
-    ## lookup each name, append with realm from hash
-    names.each {|name|
-      realm_vals = realms[name.acceptedspecies]
-      names_realms << [name, realm_vals]
-    }
+  def ModelUtilities.fix_html(html, name)
+    # fix for weird link in this file to .csv file, instead of ascii:
+    # (perhaps a MaxEnt 3.3.3e bug? when using density.Project, not a problem with marine (density.Maxent)
+    FileUtils.cp(html,html + "_cp") # copy the orig
+    html_file = File.open(html + "_cp") # open the copy
+    FileUtils.rm(html) # delete the old one
+    html_str = html_file.read
+    html_str.sub(name + ".csv", name + ".asc") # change the ref from csv to asc. Note this only replaces first occurrence
+    html_new = File.new(html,"w") # make an empty file
+    html_new.write(html_str)
+    html_new.close
+    html_file.close
+  end
 
-    return names_realms
+  def ModelUtilities.copy_results(name, output, scenario_type, html, props)
+    lambda = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + ".lambdas"
+    omission = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + "_omission.csv"
+    predictions = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + "_samplePredictions.csv"
+    results = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + "maxentResults.csv"
+    plots_dir = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + "plots" + File::SEPARATOR
+    FileUtils.cp(html, output + name + ".html")
+    FileUtils.cp(lambda, output + name + ".lambdas")
+    FileUtils.cp(omission, output + name + "_omission.csv")
+    FileUtils.cp(predictions, output + name + "_samplePredictions.csv")
+    FileUtils.cp(results, output + "maxentResults.csv")
+    FileUtils.cp_r(plots_dir, output + "plots")
+  end
+
+  def ModelUtilities.zip_first(name, scenario, outputname, output, props)
+    Zip::Archive.open(props['outputdir'] + name + File::SEPARATOR + scenario + '.zip', Zip::CREATE) do |archive|
+      archive.add_file(outputname)
+      archive.add_file(output + name + ".html")
+      archive.add_file(output + name + ".lambdas")
+      archive.add_file(output + name + "_omission.csv")
+      archive.add_file(output + name + "_samplePredictions.csv")
+      archive.add_file(output + "maxentResults.csv")
+      archive.add_dir("plots")
+      a = props['outputdir'] + name + File::SEPARATOR + scenario + File::SEPARATOR + "plots" + File::SEPARATOR
+      pngs = Dir.glob(a + '*.png')
+      pngs.each {|png|
+        archive.add_file("plots" + File::SEPARATOR + File.basename(png), png)
+      }
+    end
   end
 
 end

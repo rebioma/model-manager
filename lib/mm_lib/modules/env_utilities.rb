@@ -1,4 +1,4 @@
-# 
+# Module with utilities related to environmental layers
 module EnvUtilities
   def EnvUtilities.load_layer(layer)
     layerfile = File.open(layer)

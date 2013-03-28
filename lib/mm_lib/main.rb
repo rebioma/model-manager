@@ -286,8 +286,11 @@ for j in (0..final_spp.size - 1) do #every species
   # Note: final_spp[j] = each species (final_spp[j].size = total records for that species]
   #       final_spp[j][x] = one record array for one spp [uniq_val,cellid,occ]
   #       final_spp[j][x][2] = one occurrence
+  GeneralUtilities.puts_log(GeneralUtilities.dash(100),log)
+  GeneralUtilities.puts_log("Starting model for " + final_spp[j][0][2].AcceptedSpecies.split(" ").join("_"),log)
+  GeneralUtilities.puts_log(GeneralUtilities.dash(100),log)
   # additional setup:
-  good_proj = false # looks for at least one successful projection for each species
+  project_ok = false # looks for at least one successful projection for each species
 
   # One sample swd method for terr, another for marine
   realm = tax_hash[final_spp[j][0][2].AcceptedSpecies][1] == "1" ? "marine" : "terrestrial"
@@ -328,7 +331,7 @@ for j in (0..final_spp.size - 1) do #every species
     GeneralUtilities.rm_mkdir(output)
     #Debug# puts "Params: " + props['maxent_path'] + ", " + backfiles[0] + ", " + props['trainingdir'] + name + "_" + props['scen_name1'] + "_swd.csv"  + ", " + output
     samples = props['trainingdir'] + name + "_swd.csv"
-    terr_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :samples=>samples, :background=>terr_backfile)
+    terr_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :lambdas=>samples, :background=>terr_backfile)
     if terr_model
       to_validate["model"] = props['scen_name1']
       to_validate["output"] = output
@@ -339,7 +342,7 @@ for j in (0..final_spp.size - 1) do #every species
     output = props['trainingdir'] + name + "_marine" + File::SEPARATOR
     GeneralUtilities.rm_mkdir(output)
     samples = props['trainingdir'] + name + "_" + "marine_swd.csv"
-    marine_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :samples=>samples, :background=>mar_backfile)
+    marine_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :lambdas=>samples, :background=>mar_backfile)
     if marine_model
       GeneralUtilities.puts_log(name + " marine_model success: " + marine_model.to_s, log)
       to_validate["model"] = "marine"
@@ -373,7 +376,6 @@ for j in (0..final_spp.size - 1) do #every species
     #          to grids that are the same that produced the lambda; rather, for marine we
     #          use Maxent.density.MaxEnt to "project" to grids without replication
     ##
-
     next if validated == nil or validated["validity"] == false # necessary??
     if validated["validity"] # true=valid, then create full model
       output = props['trainingdir'] + name + "_" + validated["model"] + "_full" + File::SEPARATOR
@@ -391,7 +393,7 @@ for j in (0..final_spp.size - 1) do #every species
       #samples = props['trainingdir'] + name + "_" + v["model"].sub + "_swd.csv"
       #puts samples
       args = ["redoifexists", "nowarnings", "novisible", "threads=" + props['threads_arg'].to_s, "extrapolate=" + props['extrapolate'].to_s, "autorun"]
-      full_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :samples=>samples, :background=>background_file)
+      full_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :lambdas=>samples, :background=>background_file)
       GeneralUtilities.puts_log(name + " " + validated["model"] + "_full FULL model success: " + full_model.to_s, log)
     else
         # TO DO Delete model testing stuff -- to save space
@@ -399,11 +401,6 @@ for j in (0..final_spp.size - 1) do #every species
     end
   end # at least one valid model
 
-#######################
-  puts "Process exit"
-  Process.exit
-#######################
-  
   #
   # Run Maxent projections from full model lambdas
   #
@@ -412,39 +409,30 @@ for j in (0..final_spp.size - 1) do #every species
   newdir = props['outputdir'] + name
   GeneralUtilities.rm_mkdir(newdir)
 
-  climate_scenarios = climonly_model == true ? props['climate_scenarios'].split(",") : nil
-  forest_scenarios = climfor_model == true ? props['forest_scenarios'].split(",") : nil
+  terrestrial_scenarios = terr_model == true ? props['terrestrial_scenarios'].split(",") : nil
   marine_scenario = marine_model == true ? ["marine"] : nil # only one single marine projection (for now)
-  [climate_scenarios, forest_scenarios, marine_scenario].each_with_index {|scenarios, i|
+  [terrestrial_scenarios, marine_scenario].each_with_index {|scenarios, i|
     case i
-    when 0
+    when 0 
       scenario_type = props['scen_name1']
       density = "density.Project"
       lambda = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + ".lambdas"
-      args = ""
+      args = [nil]
     when 1
-      scenario_type = props['scen_name2']
-      density = "density.Project"
-      lambda = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + ".lambdas"
-      args = ""
-    when 2
       scenario_type = "marine"
       density = "density.MaxEnt"
       lambda = props['trainingdir'] + name + "_" + "marine_swd.csv" # not lambdas, actually samples here
-      args = "responsecurves redoifexists nowarnings novisible autorun threads=" + props['threads_arg'].to_s
-      #puts args
+      args = ["responsecurves redoifexists nowarnings novisible autorun threads=" + props['threads_arg'].to_s]
     end
     next if scenarios == nil
     scenarios.each {|scenario|
       output = props['outputdir'] + name + File::SEPARATOR + scenario + File::SEPARATOR
       #puts "out: " + out
       grids = props['link_path'] + scenario + File::SEPARATOR
-      FileUtils.rm_rf(output) if FileTest::directory?(output) # make output directory
-      Dir::mkdir(output)
+      GeneralUtilities.rm_mkdir(output)
       # need an actual ascii file name
       outputname = scenario_type == "marine" ? output : output + name + ".asc" # switch needed for density.Project
-      project_ok = ModelUtilities.run_maxent_density(props['maxent_path'], props['memory_arg'], lambda, grids, outputname, args, density)
-      good_proj = true if project_ok
+      project_ok = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], outputname, args, :density=>density, :lambdas=>lambda, :background=>grids)
       if project_ok
         outputname = outputname + name + ".asc" if scenario_type == "marine" # switch output to asc name for zipping
         new = EnvUtilities.fix_asc(outputname, props['terr_grid']['headlines'])
@@ -458,49 +446,12 @@ for j in (0..final_spp.size - 1) do #every species
         # Copies MaxEnt html from Full model to new output folder
         if scenario_type != "marine"
           html = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + ".html"
-          # fix for weird link in this file to .csv file, instead of ascii:
-          # (perhaps a MaxEnt 3.3.3e bug? when using density.Project, not a problem with marine (density.Maxent)
-          FileUtils.cp(html,html + "_cp") # copy the orig
-          html_file = File.open(html + "_cp") # open the copy
-          FileUtils.rm(html) # delete the old one
-          html_str = html_file.read
-          html_str.sub(name + ".csv", name + ".asc") # change the ref from csv to asc. Note this only replaces first occurrence
-          html_new = File.new(html,"w") # make an empty file
-          html_new.write(html_str)
-          html_new.close
-          html_file.close
-          #csv = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + ".csv"
-          lambda = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + ".lambdas"
-          omission = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + "_omission.csv"
-          predictions = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + "_samplePredictions.csv"
-          results = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + "maxentResults.csv"
-          plots_dir = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + "plots" + File::SEPARATOR
-          FileUtils.cp(html, output + name + ".html")
-          #FileUtils.cp(csv, output + name + ".csv") # this includes private data, not clear what it is anyway
-          FileUtils.cp(lambda, output + name + ".lambdas")
-          FileUtils.cp(omission, output + name + "_omission.csv")
-          FileUtils.cp(predictions, output + name + "_samplePredictions.csv")
-          FileUtils.cp(results, output + "maxentResults.csv")
-          FileUtils.cp_r(plots_dir, output + "plots")
+          ModelUtilities.fix_html(html, name)
+          ModelUtilities.copy_results(name, output, scenario_type, html, props)
         end
 
         # Zip each scenario
-        Zip::Archive.open(props['outputdir'] + name + File::SEPARATOR + scenario + '.zip', Zip::CREATE) do |archive|
-          archive.add_file(outputname)
-          archive.add_file(output + name + ".html")
-          #archive.add_file(output + name + ".csv") if scenario_type != "marine" # this includes private data, not clear what it is anyway
-          archive.add_file(output + name + ".lambdas")
-          archive.add_file(output + name + "_omission.csv")
-          archive.add_file(output + name + "_samplePredictions.csv")
-          archive.add_file(output + "maxentResults.csv")
-          archive.add_dir("plots")
-          a = props['outputdir'] + name + File::SEPARATOR + scenario + File::SEPARATOR + "plots" + File::SEPARATOR
-          pngs = Dir.glob(a + '*.png')
-          pngs.each {|png|
-            archive.add_file("plots" + File::SEPARATOR + File.basename(png), png)
-          }
-          #archive.add_file("plots" + File::SEPARATOR + name + "_roc.png", output + "plots" + File::SEPARATOR + name + "_roc.png")
-        end
+        ModelUtilities.zip_first(name, scenario, outputname, output, props)
         GeneralUtilities.puts_log("Created " + scenario + " projection for " + name + ": " + project_ok.to_s, log)
       end # project_ok
       if project_ok == false
@@ -513,36 +464,15 @@ for j in (0..final_spp.size - 1) do #every species
   # Write occurrences to occurrence csv (one per species)
   #
   ##
-  if good_proj
+  if project_ok
     occ_array = files["occ_array"]
     priv_array = files["priv_array"]
     skip_fields = ["Owner"] # include any fields here to exclude from CSV
     col_names = Occurrence.column_names
     csv_occ_file = CsvWriter2.write_csv(occ_array, props['outputdir'] + name + File::SEPARATOR + name + "_occurrences.csv", col_names, skip_fields)
-    #
+
     # Write citation file (one per species)
-    #
-    ##
-    cite_file = File.new(props['outputdir'] + name + File::SEPARATOR + "citation.txt","w")
-    source_file = File.open(File.dirname(File.expand_path(__FILE__)) + "/text/citation.template.txt","r")
-    source_lines = source_file.readlines
-
-    i = 0
-    source_lines.each {|line|
-      line = line.sub("zzz", final_spp[j][0][2].AcceptedSpecies) if i == 0
-      line = line.sub("zzz", Time.now.to_s) if i == 1
-      line = line.sub("zzz", final_count.to_s) if i == 3
-      line = line.sub("zzz", priv_array.size.to_s) if i == 4
-      line = line.sub("zzz", name + "_occurrences.csv") if i == 7
-      line = line.sub("zzz", Time.now.year.to_s) if i == 10
-      line = line.sub("zzz", GeneralUtilities.get_month_name(Time.now.month) + " " + Time.now.day.to_s + ", " + Time.now.year.to_s) if i == 12
-      cite_file.puts(line.gsub(/\n/, "\r\n"))
-      #puts line + ", " + i.to_s
-      i += 1
-    }
-
-    cite_file.flush
-    cite_file.close
+    GeneralUtilities.write_citation(name, final_count, priv_array, props)
 
     # Zip each species
     zipfile = props['outputdir'] + name + '.zip'
@@ -552,7 +482,7 @@ for j in (0..final_spp.size - 1) do #every species
       archive.add_file(props['outputdir'] + name + File::SEPARATOR + "citation.txt")
     end
 
-    [climate_scenarios, forest_scenarios, marine_scenario].each_with_index {|scenarios, i|
+    [terrestrial_scenarios, marine_scenario].each_with_index {|scenarios, i|
       next if scenarios == nil
       scenarios.each {|scenario|
         Zip::Archive.open(zipfile, Zip::CREATE) do |archive|
@@ -571,21 +501,17 @@ for j in (0..final_spp.size - 1) do #every species
   else
     GeneralUtilities.puts_log("No valid projections for " + name + "...", log)
   end # at least one validated full model
-  GeneralUtilities.puts_log(GeneralUtilities.dash(80) + "\n" + GeneralUtilities.dash(80), log)
+  GeneralUtilities.puts_log(GeneralUtilities.dash(80), log)
 end #each species
 
-# Final to do:
-# 5) Delete bash scripts and any other temp/extraneous files TO DO (see above, del. temp training)
-# especially delete training models to save space
-
-# chown files created during run
+# Optionally change ownership of files created during run
 if props['chown']
   GeneralUtilities.puts_log("Changing model ownership...", log)
   Dir.glob(props['trainingdir'] + '**/*').each {|f| File.chown props['owner_uid'], props['owner_uid'], f}
   Dir.glob(props['outputdir'] + '**/*').each {|e| File.chown props['owner_uid2'], props['owner_uid2'], e}
 end
 
-# copy output to Models path on tomcat
+# Optionally copy output to Models path on tomcat
 if props['move_to_tomcat']
   if props['delete_old_tomcat']
     GeneralUtilities.puts_log("Deleting existing models from tomcat directory: " + props['models_path'], log)

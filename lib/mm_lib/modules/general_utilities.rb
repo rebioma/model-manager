@@ -202,4 +202,27 @@ module GeneralUtilities
     }
   end
 
+  def GeneralUtilities.write_citation(name,final_count,priv_array,props)
+    cite_file = File.new(props['outputdir'] + name + File::SEPARATOR + "citation.txt","w")
+    source_file = File.open(Rails.root.to_s + "/lib/mm_lib/text/citation.template.txt","r")
+    source_lines = source_file.readlines
+
+    i = 0
+    source_lines.each {|line|
+      line = line.sub("zzz", name) if i == 0
+      line = line.sub("zzz", Time.now.to_s) if i == 1
+      line = line.sub("zzz", final_count.to_s) if i == 3
+      line = line.sub("zzz", priv_array.size.to_s) if i == 4
+      line = line.sub("zzz", name + "_occurrences.csv") if i == 7
+      line = line.sub("zzz", Time.now.year.to_s) if i == 10
+      line = line.sub("zzz", GeneralUtilities.get_month_name(Time.now.month) + " " + Time.now.day.to_s + ", " + Time.now.year.to_s) if i == 12
+      cite_file.puts(line.gsub(/\n/, "\r\n"))
+      #puts line + ", " + i.to_s
+      i += 1
+    }
+
+    cite_file.flush
+    cite_file.close
+  end
+
 end

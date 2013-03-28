@@ -1,5 +1,4 @@
 ## YAML with some basic properties for use in project
-#
 
 ## General properties
 # rails_env sets database to development or production according to env/db in database.yml 
@@ -33,7 +32,7 @@ logs: "/home/tomay/rails/model-manager/lib/mm_lib/log/"
 tmp: "/home/tomay/rails/model-manager/tmp/"
 env_path: "/home/tomay/mm/env_layers/ascii_ipcc4/"
 taxonomic_authority_path: "/home/tomay/mm/taxonomy_edit.csv" # because of encoding issues deleted all extra cols
-link_path: "/home/tomay/mm/env_layers/ascii_links/"
+link_path: "/home/tomay/mm/env_layers/ascii_links2/"
 trainingdir: "/home/tomay/mm/training/"
 #Final location for output from model_manager; see below for tomcat path
 outputdir: "/home/tomay/mm/output/" 
@@ -89,13 +88,8 @@ marine_grid:
 
 ## Model scenario properties
 #climate_scenarios: "1950_climate_only,2000_climate_only,2080_climate_only"
-climate_scenarios: "current,future_a2a,future_b2a"
-forest_scenarios: "1950_climate_forest,2000_climate_forest,2080a_climate_forest,2080b_climate_forest"
-#scen_name1: "climate_only"
-#scen_name2: "climate_forest"
+terrestrial_scenarios: "current,2100_a2a,2100_b2a"
 scen_name1: "current"
-clim_scen1: "a2a"
-clim_scen2: "b2a"
 forest_eras: "1950,1970,1990,2000"
 
 #clim_era_layers:
