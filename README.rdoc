@@ -62,6 +62,7 @@ Unfortunately this is not general purpose code, it is highly customized to our p
 == Configuration
 
 1. Edit config/database.yml for local dev and prod databases (local user and pass) and adapters (e.g. mysql or pg)
+       cp config/database-template.yml config/database.yml
 
 2. Get environmental layers, save locally and unzip
        wget https://rebioma.googlecode.com/files/ascii_ipcc4.zip
@@ -72,9 +73,10 @@ Unfortunately this is not general purpose code, it is highly customized to our p
 4. Setup ascii links to environmental layers, use this file as a template
        wget https://rebioma.googlecode.com/files/setup_links.xlsx
 
-5. Download MaxEnt (currently using version 3.3.3e)
+5. Download {MaxEnt}[link:http://www.cs.princeton.edu/~schapire/maxent/] (currently using version 3.3.3e)
 
 6. Update lib/mm_lib/yml/properties.yml for local filenames and other run parameters
+       cp lib/mm_lib/yml/properties-template.yml lib/mm_lib/yml/properties.yml
 
 == To run model-manager
 
