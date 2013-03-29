@@ -54,10 +54,12 @@ Unfortunately this is not general purpose code, it is highly customized to our p
        cd model-manager
        bundle install
 
+* Note: if mysql error on bundle install, try sudo apt-get install libmysqlclient-dev
+* Note: if pg error on bundle install, try sudo apt-get install ruby-dev libpq-dev build-essential
 * The Getting Started Guide: http://guides.rubyonrails.org/getting_started.html
 * Ruby on Rails Tutorial Book: http://www.railstutorial.org/
 
-== Run
+== To run model-manager
 
        $ rake model_manager:main
 
