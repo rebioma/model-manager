@@ -20,6 +20,9 @@
 # Ignore database.yml
 /config/database.yml
 
+# Ignore properties.yml
+/lib/mm_lib/yml/properties.yml
+
 # Ignore log
 /lib/mm_lib/log
 

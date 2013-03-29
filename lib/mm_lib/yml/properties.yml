@@ -52,9 +52,9 @@ owner_uid2: 1001
 models_path: "/home/tomcat/tomcat6/webapps/test/ModelOutput/"
 #if true copy (as symbolic links) files to final location specified above
 move_to_tomcat: false
-links: true
+links: false
 # if true delete existing models on tomcat. Note: only runs if move_to_tomcat == true 
-delete_old_tomcat: true
+delete_old_tomcat: false
 
 ## Modeling properties
 maxent_path: "/home/tomay/mm/maxent/maxent3.3.3e.jar"

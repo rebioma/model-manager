@@ -59,6 +59,20 @@ Unfortunately this is not general purpose code, it is highly customized to our p
 * The Getting Started Guide: http://guides.rubyonrails.org/getting_started.html
 * Ruby on Rails Tutorial Book: http://www.railstutorial.org/
 
+== Configuration
+
+1. Edit config/database.yml for local dev and prod databases (local user and pass) and adapters (e.g. mysql or pg)
+
+2. Get environmental layers, save locally and unzip
+       wget https://rebioma.googlecode.com/files/ascii_ipcc4.zip
+
+3. Get marine mask, save locally and unzip
+       wget https://rebioma.googlecode.com/files/marine_mask.asc.zip
+
+4. Download MaxEnt (currently using version 3.3.3e)
+
+5. Update lib/mm_lib/yml/properties.yml for local filenames and other run parameters
+
 == To run model-manager
 
        $ rake model_manager:main
