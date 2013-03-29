@@ -27,7 +27,8 @@ GeneralUtilities.puts_log("Set rails environment to " + Rails.env, log)
 # STEP 1
 # Read taxonomic authority
 ##
-tax_hash = ModelUtilities.make_taxonomy_hash(props['taxonomic_authority_path'])
+#tax_hash = ModelUtilities.make_taxonomy_hash(props['taxonomic_authority_path'])
+tax_hash = ModelUtilities.make_taxonomy_hash_from_table()
 GeneralUtilities.puts_log("Reading taxonomic authority. Total species in TA: " + tax_hash.size.to_s, log)
 species_count = GeneralUtilities.count_species(tax_hash)
 if (species_count["mar_spp"] == 0 and props['marine'] == true)

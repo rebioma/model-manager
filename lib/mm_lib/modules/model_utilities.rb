@@ -250,6 +250,15 @@ module ModelUtilities
     return tax_hash  
   end
 
+  def ModelUtilities.make_taxonomy_hash_from_table()
+    tax_hash = {}
+    species = Taxonomy.all
+    species.each {|spp|
+      tax_hash[spp.AcceptedSpecies] = [spp.IsTerrestrial.to_i.to_s,spp.IsMarine.to_i.to_s]
+    }
+    return tax_hash
+  end
+
   def ModelUtilities.fix_html(html, name)
     # fix for weird link in this file to .csv file, instead of ascii:
     # (perhaps a MaxEnt 3.3.3e bug? when using density.Project, not a problem with marine (density.Maxent)
