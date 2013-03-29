@@ -69,9 +69,12 @@ Unfortunately this is not general purpose code, it is highly customized to our p
 3. Get marine mask, save locally and unzip
        wget https://rebioma.googlecode.com/files/marine_mask.asc.zip
 
-4. Download MaxEnt (currently using version 3.3.3e)
+4. Setup ascii links to environmental layers, use this file as a template
+       wget https://rebioma.googlecode.com/files/setup_links.xlsx
 
-5. Update lib/mm_lib/yml/properties.yml for local filenames and other run parameters
+5. Download MaxEnt (currently using version 3.3.3e)
+
+6. Update lib/mm_lib/yml/properties.yml for local filenames and other run parameters
 
 == To run model-manager
 
