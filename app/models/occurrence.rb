@@ -1,6 +1,6 @@
 class Occurrence < ActiveRecord::Base
   # establish_connection "rebioma_#{Rails.env}"
-  self.table_name = "Occurrence"
+  #self.table_name = "Occurrence"
   self.primary_key = "ID"
   #alias_attribute :acceptedspecies, :AcceptedSpecies
   #alias_attribute :decimallatitude, :DecimalLatitude
