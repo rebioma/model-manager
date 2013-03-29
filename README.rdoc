@@ -35,22 +35,29 @@ Unfortunately this is not general purpose code, it is highly customized to our p
 
 2. install rvm. See {this guide}[link:https://rvm.io/rvm/install/]:
        \curl -L https://get.rvm.io | bash -s stable --autolibs=3 --rails
-       rvm install ruby-2.0.0-p0
-       rvm install ruby-1.9.3 # optional
-       rvm --default use ruby-2.0.0
+       rvm install ruby-2.0.0-p0 # optional
+       rvm install ruby-1.9.3 
+       rvm --default use ruby-1.9.3
        gem install rails
 
-3. Go to http://localhost:3000/ and you'll see:
-       "Welcome aboard: You're riding Ruby on Rails!"
+3. If all is well try:
+       ruby -v # should see $ ruby 2.0.0p0 (2013-02-24 revision 39474) [i686-linux]
+       rails -v # should see $ Rails 3.2.13
 
-4. Follow the guidelines to start developing your application. You can find
-the following resources handy:
+4. Install git:
+       sudo apt-get install git
+
+5. Change to your directory of choice and clone project:
+       git clone https://github.com/tomay/model-manager.git
+
+6. Change into the "model-manager" directory, and install missing gems with 'bundle install'
+       cd model-manager
+       bundle install
 
 * The Getting Started Guide: http://guides.rubyonrails.org/getting_started.html
 * Ruby on Rails Tutorial Book: http://www.railstutorial.org/
 
+== Run
 
-== Running
-
-$ rake model_manager:main
+       $ rake model_manager:main
 
