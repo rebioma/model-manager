@@ -30,11 +30,15 @@ Unfortunately this is not general purpose code, it is highly customized to our p
 
 == Installation
 
-1. At the command prompt, create a new Rails application:
-       <tt>rails new myapp</tt> (where <tt>myapp</tt> is the application name)
+1. install javascript runtime (e.g. nodejs):
+       sudo apt-get install nodejs
 
-2. Change directory to <tt>myapp</tt> and start the web server:
-       <tt>cd myapp; rails server</tt> (run with --help for options)
+2. install rvm. See {this guide}[link:https://rvm.io/rvm/install/]:
+       \curl -L https://get.rvm.io | bash -s stable --autolibs=3 --rails
+       rvm install ruby-2.0.0-p0
+       rvm install ruby-1.9.3 # optional
+       rvm --default use ruby-2.0.0
+       gem install rails
 
 3. Go to http://localhost:3000/ and you'll see:
        "Welcome aboard: You're riding Ruby on Rails!"

@@ -195,7 +195,7 @@ names.each_with_index {|species,z|
         # clim_era = year < 1975 ? 1950 : 2000 # assigns clim_era to 1950 for recs < 1975; 2000 for the rest
         # note: new worldclim no longer includes 1950, so no distinction here, no longer use "clim_era"
         for_era = EnvUtilities.get_forest_era(year, props)
-        for_val = EnvUtilities.get_value(for_era, props['env_path'], cellid[1], cellid[2])
+        for_val = EnvUtilities.get_value(for_era, props, cellid[1], cellid[2])
         if for_val.nil?
           GeneralUtilities.puts_log("nil forest value for " + name + "(lat: " + lat.to_s + ", long: " + long.to_s + ")",log)  
           skip = true
@@ -251,7 +251,7 @@ if props['use_existing_background']['value'] == false # create new background
   terr_backfile = ModelUtilities.create_background_swd(years, mask, props, props['env_layers'], props['trainingdir'] + "background_terr.swd", false)
   mar_backfile = true # allows to continue with no marine models 
   if props['marine'] == true
-    mar_backfile = ModelUtilities.create_marine_background_swd(marine_mask, props, props['marine_layers'], props['trainingdir'] + "background_marine.swd", true)
+    mar_backfile = ModelUtilities.create_background_swd(nil, marine_mask, props, props['marine_layers'], props['trainingdir'] + "background_marine.swd", true)
   end
   if (terr_backfile and mar_backfile)
     GeneralUtilities.puts_log("\nBackground SWDs ok: true",log)

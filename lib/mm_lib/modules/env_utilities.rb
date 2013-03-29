@@ -75,24 +75,23 @@ module EnvUtilities
     return ascii
   end
 
-  def EnvUtilities.get_value(layerfile, env_path, getrow, getcol) #offset built into getrow
+  def EnvUtilities.get_value(layerfile, props, getrow, getcol) #offset built into getrow
     # Requires bash to run, uses tail and head to get the line of interest from large file
     begin
-      tailcmd = "tail -n +" + (getrow + 1).to_s + " " + env_path + layerfile + " > " + env_path + "tail.asc"
-      headcmd = "head -n 1 " + env_path + "tail.asc" + " > " + env_path + "head.asc"
+      tailcmd = "tail -n +" + (getrow + 1).to_s + " " + props['env_path'] + layerfile + " > " + props['tmp'] + "tail.asc"
+      headcmd = "head -n 1 " + props['tmp'] + "tail.asc" + " > " + props['tmp'] + "head.asc"
       success = system(tailcmd) # use tail to get file from line n onwards saves to temp file on disc boo
       successagain = system(headcmd) # use head to get first line of boo saved to boohoo
-      afile = File.open(env_path + "head.asc")
+      afile = File.open(props['tmp'] + "head.asc","r")
       aline = afile.readlines
-      #puts aline[0]
       aval = aline[0].chomp.split(" ")[getcol]
       afile.close
-      File.delete(env_path + "head.asc")
-      File.delete(env_path + "tail.asc")
+      File.delete(props['tmp'] + "head.asc")
+      File.delete(props['tmp'] + "tail.asc")
       aval2 = sprintf( "%0.07f", aval)
       return aval2 # note: string with 7 decimal places
     rescue
-      puts "rescue (getrow):" + getrow.to_s
+      puts "rescue (getrow): " + getrow.to_s + ", (getcol): " + getcol.to_s + ", (layer): " + layerfile 
     end
   end
 

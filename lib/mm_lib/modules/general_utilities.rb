@@ -100,11 +100,8 @@ module GeneralUtilities
         vals = line.split(" ")
         vals.each_with_index {|val, getcol|
           if val == "1"
-            # Is this necessary to get latlong and thesn a new occurrence? Used later on?
-            # Answer: Yes, lat-long used in the generation of background. We could also look it up there
-            # but it has to be looked up somewhere, here or there.
+            #lat-long used in the generation of background. 
             latlong = ModelUtilities.get_latlong(xll, yll, cell, getrow, getcol, nrows, headlines)
-            #occ1 = NewOccurrence.new("mskspp-r" + getrow.to_s + "c" + getcol.to_s, latlong[0], latlong[1])
             occ1 = Occurrence.new(:AcceptedSpecies => "mskspp-r" + getrow.to_s + "c" + getcol.to_s, :DecimalLatitude => latlong[0], :DecimalLongitude => latlong[1]) 
             mask << [cellid,occ1]
           end

@@ -64,27 +64,6 @@ module ModelUtilities
     return cellid, getrow, getcol # NOTE headlines offset built into getrow
   end
 
-  def ModelUtilities.get_random_occurrence(xll, yll, cell, nrows, ncols, layerfile, env_path, offset)
-    val = -9999
-    getcol = 0
-    getrow = 0
-    # runs until landing on a non-null grid cell
-    until val != -9999
-      getcol = rand(ncols)
-      getrow = rand(nrows) + offset
-      val = (EnvUtilities.get_value(layerfile, env_path, getrow, getcol)).to_f
-    end
-    # gets lat long for this path row
-    #puts "val " + val.to_s
-    #puts "getcol " + getcol.to_s
-    #puts "getrow " + getrow.to_s
-    latlong = ModelUtilities.get_latlong(xll, yll, cell, getrow, getcol, nrows, offset)
-    #puts "lat " + latlong[0].to_s
-    #puts "long " + latlong[1].to_s
-    occ = NewOccurrence.new("background",latlong[0],latlong[1])
-    return occ
-  end
-
   def ModelUtilities.get_latlong(xll, yll, cell, getrow, getcol, nrows, headlines)
    #llid = ((nrows - 1) * ncols) + 1
    ll_center_x = xll + (cell * 0.5)
@@ -148,13 +127,13 @@ module ModelUtilities
     nodata = false
     layers.each {|layer|
       ourlayer = marine ? layer : layer.sub(".asc","_2000.asc")
-      aval = EnvUtilities.get_value(ourlayer, props['env_path'], cellid[1], cellid[2])
+      aval = EnvUtilities.get_value(ourlayer, props, cellid[1], cellid[2])
       line << aval # Note: aval is returned as string with 7 decimal places
       nodata = true if (aval.to_i == -9999 or aval == nil)
     }
     if marine == false
       for_layer = EnvUtilities.get_forest_ascii(era, props)
-      fval = EnvUtilities.get_value(for_layer, props['env_path'], cellid[1], cellid[2])
+      fval = EnvUtilities.get_value(for_layer, props, cellid[1], cellid[2])
       line << fval
     end
     return [line, nodata]    
