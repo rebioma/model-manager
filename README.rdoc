@@ -83,6 +83,14 @@ Unfortunately this is not general purpose code, it is highly customized to our p
 From terminal
        $ rake model_manager:main
 
-Another option over SSH
-       $ nohup rake model_manager:main & # useful to avoid HUP signal if disconnected
+An option over SSH with nohup
+
+$ nohup rake model_manager:main & # avoid HUP signal if disconnected
+
+Another option over SSH with screen
+       $ screen
+       $ rake model_manager:main
+       $ Press Ctrl-A then Ctrl-D # this detaches screen session but leaves rake running
+       $ screen-r # to resume
+       $ exit # to exit and end screen session
 
