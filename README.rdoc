@@ -85,7 +85,7 @@ From terminal
 
 An option over SSH with nohup
 
-$ nohup rake model_manager:main & # avoid HUP signal if disconnected
+       $ nohup rake model_manager:main & # avoid HUP signal if disconnected
 
 Another option over SSH with screen
        $ screen
