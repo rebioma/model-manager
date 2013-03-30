@@ -80,5 +80,9 @@ Unfortunately this is not general purpose code, it is highly customized to our p
 
 == To run model-manager
 
+From terminal
        $ rake model_manager:main
+
+Another option over SSH
+       $ nohup rake model_manager:main & # useful to avoid HUP signal if disconnected
 
