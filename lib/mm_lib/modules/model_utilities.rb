@@ -107,8 +107,8 @@ module ModelUtilities
           #c = Time.now
           a += 1
           #puts a.to_s + ", elapsed: " + (b - c).round(3).to_s + " seconds."
+          old_perc = GeneralUtilities.print_progress(a,props['background_samples'],old_perc)
         end
-        old_perc = GeneralUtilities.print_progress(a,proportions.size,old_perc)
       }
     when true # marine
       (0..(props['background_samples'] - 1)).each_with_index do |n, p|

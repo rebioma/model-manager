@@ -252,6 +252,7 @@ if props['use_existing_background']['value'] == false # create new background
   terr_backfile = ModelUtilities.create_background_swd(years, mask, props, props['env_layers'], props['trainingdir'] + "background_terr.swd", false)
   mar_backfile = true # allows to continue with no marine models 
   if props['marine'] == true
+    GeneralUtilities.puts_log("\nMarine background...",log)
     mar_backfile = ModelUtilities.create_background_swd(nil, marine_mask, props, props['marine_layers'], props['trainingdir'] + "background_marine.swd", true)
   end
   if (terr_backfile and mar_backfile)
