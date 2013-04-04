@@ -175,7 +175,7 @@ module ModelUtilities
         occ.EmailVisible ? priv_array << occ.email : priv_array << "email not provided"
       end
       era = EnvUtilities.get_era(occ.YearCollected)
-      line, nodata = ModelUtilities.get_swd_line(env_layers, false, props, occ.DecimalLongitude, occ.DecimalLatitude, cellid, era, name)
+      line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.DecimalLongitude, occ.DecimalLatitude, cellid, era, name)
       next if nodata == true
       afile.puts(line.join(",")) 
       count += 1
@@ -281,13 +281,14 @@ module ModelUtilities
   def ModelUtilities.copy_results(name, output, scenario_type, html, props)
     lambda = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + ".lambdas"
     omission = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + "_omission.csv"
-    predictions = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + "_samplePredictions.csv"
+    ## predictions file includes private data
+    #predictions = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + "_samplePredictions.csv"
     results = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + "maxentResults.csv"
     plots_dir = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + "plots" + File::SEPARATOR
     FileUtils.cp(html, output + name + ".html")
     FileUtils.cp(lambda, output + name + ".lambdas")
     FileUtils.cp(omission, output + name + "_omission.csv")
-    FileUtils.cp(predictions, output + name + "_samplePredictions.csv")
+    #FileUtils.cp(predictions, output + name + "_samplePredictions.csv")
     FileUtils.cp(results, output + "maxentResults.csv")
     FileUtils.cp_r(plots_dir, output + "plots")
   end

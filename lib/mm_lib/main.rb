@@ -134,17 +134,13 @@ when 0
   # Regular full production run
   names = Occurrence.select("AcceptedSpecies").where(:reviewed => true).group("AcceptedSpecies")
 when 1
-  # To test one species/genera only for debugging
-  #names = Occurrence.where(:acceptedspecies => "Tetraponera grandidieri").where(:reviewed => true).group("acceptedspecies")
-  #names = Occurrence.where(:acceptedspecies => "Leptogenys arcirostris").where(:reviewed => true).group("acceptedspecies")
-  names = Occurrence.where(:AcceptedOrder => "Primates").where(:reviewed => true).group("AcceptedSpecies")
-  #names = Occurrence.where(:acceptedspecies => "Abudefduf vaigiensis").where(:reviewed => true).group("acceptedspecies")
-  #names = Occurrence.where(:acceptedspecies => "Plectroglyphidodon johnstonianus").where(:reviewed => true).group("acceptedspecies")
+  # To test one species/group for debugging
+  #names = Occurrence.where(:AcceptedOrder => "Primates").where(:reviewed => true).group("AcceptedSpecies")
+  #names = Occurrence.where(:AcceptedOrder => "Scleractinia").where(:reviewed => true).group("AcceptedSpecies")
+  names = Occurrence.where(:AcceptedGenus => "Acanthastrea").where(:reviewed => true).group("AcceptedSpecies")
+  #names = Occurrence.where(:AcceptedClass => "Anthozoa").group("AcceptedSpecies")
 end
-#names_a = names.to_a
-# This message makes no sense
-# This is just a list of species with > 1 reviewed record, set up for the next step, when we actually get records
-#GeneralUtilities.puts_log("Found " + names.to_a.size.to_s + " reviewed records", log)
+
 names_size = names.to_a.size
 GeneralUtilities.puts_log("Found " + names_size.to_s + " species with positively reviewed records", log)
 
@@ -386,17 +382,15 @@ for j in (0..final_spp.size - 1) do #every species
       when props['scen_name1']
         background_file = terr_backfile
         samples = props['trainingdir'] + name + "_swd.csv"
+        args = ["redoifexists", "nowarnings", "novisible", "threads=" + props['threads_arg'].to_s, "extrapolate=" + props['extrapolate'].to_s, "autorun"]
+        full_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :lambdas=>samples, :background=>background_file)
+        GeneralUtilities.puts_log(name + " " + validated["model"] + "_full FULL model success: " + full_model.to_s, log)
       when "marine"
-        background_file = mar_backfile
-        samples = props['trainingdir'] + name + "_" + validated["model"] + "_swd.csv"
-        next # can change this later if we end up with multiple marine scenarioss to project to
-               # for now, next just skips any marine models. Full model is produced in "projection" below
+        #background_file = mar_backfile
+        #samples = props['trainingdir'] + name + "_" + validated["model"] + "_swd.csv"
+        #continue # can change this later if we end up with multiple marine scenarios to project to
+               # for now, next just skips "full" marine models. Full model is produced in "projection" below
       end
-      #samples = props['trainingdir'] + name + "_" + v["model"].sub + "_swd.csv"
-      #puts samples
-      args = ["redoifexists", "nowarnings", "novisible", "threads=" + props['threads_arg'].to_s, "extrapolate=" + props['extrapolate'].to_s, "autorun"]
-      full_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :lambdas=>samples, :background=>background_file)
-      GeneralUtilities.puts_log(name + " " + validated["model"] + "_full FULL model success: " + full_model.to_s, log)
     else
         # TO DO Delete model testing stuff -- to save space
         # here or at end, after copy html etc.?
