@@ -281,7 +281,7 @@ module ModelUtilities
   def ModelUtilities.copy_results(name, output, scenario_type, html, props)
     lambda = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + ".lambdas"
     omission = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + "_omission.csv"
-    ## predictions file includes private data
+    ## predictions file includes private data, do not include!
     #predictions = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + "_samplePredictions.csv"
     results = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + "maxentResults.csv"
     plots_dir = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + "plots" + File::SEPARATOR
@@ -299,7 +299,8 @@ module ModelUtilities
       archive.add_file(output + name + ".html")
       archive.add_file(output + name + ".lambdas")
       archive.add_file(output + name + "_omission.csv")
-      archive.add_file(output + name + "_samplePredictions.csv")
+      ## predictions file includes private data, do not include!
+      # archive.add_file(output + name + "_samplePredictions.csv")
       archive.add_file(output + "maxentResults.csv")
       archive.add_dir("plots")
       a = props['outputdir'] + name + File::SEPARATOR + scenario + File::SEPARATOR + "plots" + File::SEPARATOR

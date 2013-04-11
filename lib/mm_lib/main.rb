@@ -45,10 +45,10 @@ GeneralUtilities.puts_log("Found " + species_count["terr_spp"].to_s + " terrestr
 #
 ##
 GeneralUtilities.puts_log("Reading database...", log)
-if props['mask_read'] == true # use saved mask
+if props['use_existing_mask']['value'] == true # use saved mask
   GeneralUtilities.puts_log("Reading terrestrial mask and years from ascii...", log)
-  mask = GeneralUtilities.read_ascii(props['mask_path'] + props['mask_file'], props['terr_grid']['headlines'], props['terr_grid']['nrows'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['cell'])
-  years = GeneralUtilities.read_years(props['mask_path'] + props['years_file'])
+  mask = GeneralUtilities.read_ascii(props['mask_path'] + props['use_existing_mask']['mask_file'], props['terr_grid']['headlines'], props['terr_grid']['nrows'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['cell'])
+  years = GeneralUtilities.read_years(props['mask_path'] + props['use_existing_mask']['years_file'])
 else # create new masks
   GeneralUtilities.puts_log("Creating new terrestrial mask from valid records...", log)
   # regular full run... 
@@ -116,7 +116,7 @@ end
 ##
 if props['marine'] == true
   GeneralUtilities.puts_log("Reading marine mask from ascii",log)
-  marine_mask = GeneralUtilities.read_ascii(props['read_marine_ascii_mask_location'], props['marine_grid']['headlines'], props['marine_grid']['nrows'], props['marine_grid']['xll'], props['marine_grid']['yll'], props['marine_grid']['cell'])
+  marine_mask = GeneralUtilities.read_ascii(props['marine_mask'], props['marine_grid']['headlines'], props['marine_grid']['nrows'], props['marine_grid']['xll'], props['marine_grid']['yll'], props['marine_grid']['cell'])
   GeneralUtilities.puts_log("Marine mask finished. Number of cells in mask: " + marine_mask.size.to_s,log)
 end
 
@@ -137,7 +137,8 @@ when 1
   # To test one species/group for debugging
   #names = Occurrence.where(:AcceptedOrder => "Primates").where(:reviewed => true).group("AcceptedSpecies")
   #names = Occurrence.where(:AcceptedOrder => "Scleractinia").where(:reviewed => true).group("AcceptedSpecies")
-  names = Occurrence.where(:AcceptedGenus => "Acanthastrea").where(:reviewed => true).group("AcceptedSpecies")
+  #names = Occurrence.where(:AcceptedGenus => "Acanthastrea").where(:reviewed => true).group("AcceptedSpecies")
+  names = Occurrence.where(:AcceptedSpecies => "Camponotus concolor").where(:reviewed => true).group("AcceptedSpecies")
   #names = Occurrence.where(:AcceptedClass => "Anthozoa").group("AcceptedSpecies")
 end
 
