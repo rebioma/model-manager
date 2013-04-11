@@ -15,12 +15,13 @@ replace_ascii_db: true
 
 ## Mask and background properties
 # read and write mask to ascii: this is a convenience and can save time if nothing else changes
-mask_write: false
-mask_read: true
 mask_path: "/home/tomay/mm/masks/"  
-mask_file: "mask_2013-03-20_14:05:33_-0700.asc"
-years_file: "years_2013-03-20_14:05:38_-0700.csv"
-read_marine_ascii_mask_location: "/home/tomay/mm/masks/marine_mask.asc"
+mask_write: false
+use_existing_mask: 
+  value: true
+  mask_file: "mask_2013-04-10_18:38:31_-0700.asc"
+  years_file: "years_2013-04-10_18:38:36_-0700.csv"
+marine_mask: "/home/tomay/mm/masks/marine_mask.asc"
 use_existing_background:
   value: true
   terrestrial_file: "/home/tomay/mm/training/background_terr.swd"
