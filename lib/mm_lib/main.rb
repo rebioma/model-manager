@@ -354,10 +354,11 @@ for j in (0..final_spp.size - 1) do #every species
   # Step 7b. Validate Maxent result (terr and marine)
   #
   ##
+  validated = []
   validated = ModelUtilities.validate_result(to_validate["output"], replicates)
   validated["model"] = to_validate["model"]
 
-  if validated == [] # Some big maxent error here, expected information not found in maxentResults.csv
+  if validated == [] || validated.nil? # Some big maxent error here, expected information not found in maxentResults.csv
     validated["validity"] = false # force to false
     invalid = true
   else

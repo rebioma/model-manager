@@ -9,7 +9,7 @@ module Maxent
     end
     cmd = [cmd_start,exts_hash[:lambdas],exts_hash[:background],output,args_array.join(" ")].join(" ")
     puts cmd
-    success = system(cmd)
+    success = system(cmd) rescue "Maxent error"
     return success
   end
 
