@@ -8,7 +8,7 @@ module Maxent
       exts_hash[:background] = "environmentallayers=" + exts_hash[:background] # background.swd or directory of env grids
     end
     cmd = [cmd_start,exts_hash[:lambdas],exts_hash[:background],output,args_array.join(" ")].join(" ")
-    #puts cmd
+    puts cmd
     success = system(cmd) rescue "Maxent error"
     return success
   end

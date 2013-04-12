@@ -185,7 +185,7 @@ module ModelUtilities
     return files
   end
 
-  def ModelUtilities.validate_result(indir, replicates)
+  def ModelUtilities.validate_result(indir, model, replicates)
     maxent_result_csv = File.open(indir + "maxentResults.csv", "r")
     lines = maxent_result_csv.readlines
     header = lines[0].split(",")
@@ -206,7 +206,7 @@ module ModelUtilities
     validity = mean_auc - standard_error
     v = validity > 0.5 ? true : false
     maxent_result_csv.close
-    return {"validity" => v, "mean_auc" => mean_auc, "standard_error" => standard_error, "value" => validity}
+    return {"validity" => v, "mean_auc" => mean_auc, "standard_error" => standard_error, "value" => validity, "model" => model}
   end
 
   def ModelUtilities.asc_table_add(name)

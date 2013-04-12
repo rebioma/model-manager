@@ -323,7 +323,7 @@ for j in (0..final_spp.size - 1) do #every species
   args = ["replicates=" + replicates.to_s, "replicatetype=crossvalidate", "redoifexists", "nowarnings", "novisible", "threads=" + props['threads_arg'].to_s, "extrapolate=" + props['extrapolate'].to_s, "autorun"]
   density = "density.MaxEnt"
   to_validate = {}
-  invalid = true
+  good_model = false
   case realm
   when "terrestrial"
     output = props['trainingdir'] + name + "_" + props['scen_name1'] + File::SEPARATOR
@@ -334,7 +334,7 @@ for j in (0..final_spp.size - 1) do #every species
     if terr_model
       to_validate["model"] = props['scen_name1']
       to_validate["output"] = output
-      invalid = false
+      good_model = true
     end
     GeneralUtilities.puts_log(name + " " + props['scen_name1'] + "_model success: " + terr_model.to_s, log)
   when "marine"
@@ -346,7 +346,7 @@ for j in (0..final_spp.size - 1) do #every species
       GeneralUtilities.puts_log(name + " marine_model success: " + marine_model.to_s, log)
       to_validate["model"] = "marine"
       to_validate["output"] = output
-      invalid = false
+      good_model = true
     end
   end
 
@@ -355,19 +355,18 @@ for j in (0..final_spp.size - 1) do #every species
   #
   ##
   validated = []
-  validated = ModelUtilities.validate_result(to_validate["output"], replicates)
-  validated["model"] = to_validate["model"]
+  validated = ModelUtilities.validate_result(to_validate["output"], to_validate["model"], replicates) unless good_model == false
 
-  if validated == [] || validated.nil? # Some big maxent error here, expected information not found in maxentResults.csv
-    validated["validity"] = false # force to false
-    invalid = true
+  if validated == [] || validated.nil? # Some big maxent error here, expected information not found in maxentResults.csv during validation
+    #validated["validity"] = false # force to false
+    good_model = false
   else
     GeneralUtilities.puts_log(GeneralUtilities.dash(80) + "\n" + name + " " + validated["model"] + " VALIDITY TEST:" + "\n" + GeneralUtilities.dash(80), log)
     GeneralUtilities.puts_log("Mean AUC: " + validated["mean_auc"].to_s + "\nStandard error: " + validated["standard_error"].to_s + "\nValidity: " + validated["value"].to_s, log)
     GeneralUtilities.puts_log(name + " " + validated["model"] + " valid: " + validated["validity"].to_s + "\n" + GeneralUtilities.dash(80), log)
   end
 
-  if invalid # NO valid models
+  if good_model = false # NO valid model for a variety of reasons
     GeneralUtilities.puts_log("NO valid model for " + name + "...", log)
   else # a valid model
     #
@@ -376,7 +375,6 @@ for j in (0..final_spp.size - 1) do #every species
     #          to grids that are the same that produced the lambda; rather, for marine we
     #          use Maxent.density.MaxEnt to "project" to grids without replication
     ##
-    next if validated == nil or validated["validity"] == false # necessary??
     if validated["validity"] # true=valid, then create full model
       output = props['trainingdir'] + name + "_" + validated["model"] + "_full" + File::SEPARATOR
       GeneralUtilities.rm_mkdir(output)
@@ -394,6 +392,7 @@ for j in (0..final_spp.size - 1) do #every species
                # for now, next just skips "full" marine models. Full model is produced in "projection" below
       end
     else
+      next # next if validated["validity"] == false
         # TO DO Delete model testing stuff -- to save space
         # here or at end, after copy html etc.?
     end
@@ -409,7 +408,7 @@ for j in (0..final_spp.size - 1) do #every species
 
   terrestrial_scenarios = terr_model == true ? props['terrestrial_scenarios'].split(",") : nil
   marine_scenario = marine_model == true ? ["marine"] : nil # only one single marine projection (for now)
-  [terrestrial_scenarios, marine_scenario].each_with_index {|scenarios, i|
+  [terrestrial_scenarios, marine_scenario].each_with_index {|scenarios, i| # will skip this loop if no models
     case i
     when 0 
       scenario_type = props['scen_name1']
