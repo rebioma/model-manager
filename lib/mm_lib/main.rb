@@ -343,11 +343,11 @@ for j in (0..final_spp.size - 1) do #every species
     samples = props['trainingdir'] + name + "_" + "marine_swd.csv"
     marine_model = Maxent.run_maxent(props['maxent_path'], props['memory_arg'], output, args, :density=>density, :lambdas=>samples, :background=>mar_backfile)
     if marine_model
-      GeneralUtilities.puts_log(name + " marine_model success: " + marine_model.to_s, log)
       to_validate["model"] = "marine"
       to_validate["output"] = output
       good_model = true
     end
+    GeneralUtilities.puts_log(name + " marine_model success: " + marine_model.to_s, log)
   end
 
   #
@@ -366,7 +366,7 @@ for j in (0..final_spp.size - 1) do #every species
     GeneralUtilities.puts_log(name + " " + validated["model"] + " valid: " + validated["validity"].to_s + "\n" + GeneralUtilities.dash(80), log)
   end
 
-  if good_model = false # NO valid model for a variety of reasons
+  if good_model == false # NO valid model for a variety of reasons
     GeneralUtilities.puts_log("NO valid model for " + name + "...", log)
   else # a valid model
     #
