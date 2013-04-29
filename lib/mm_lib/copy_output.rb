@@ -1,8 +1,3 @@
-# questions
-# 1. do we need to chown files? ((test this))
-# 2. do we copy files or links (or option) ((option))
-# 3. what files to copy, or everything in output? ((everything))
-
 # copy output to tomcat with options
 require ARGV[0] #rails_environment
 require 'logger'
@@ -53,5 +48,5 @@ if props['move_to_tomcat']
   Dir.glob(props['models_path'] + '**/*').each {|e| File.chown props['owner_uid2'], props['owner_uid2'], e} if props['chown']
   msg = "Changing model ownership..."; puts msg if props['chown']; log.info msg if props['chown']
 else
-  msg = "Move_to_tomcat set to false in properties.yml. No files moved or copied. Exiting...", puts msg; log.info msg
+  msg = "Move_to_tomcat was set to false in properties.yml. No files moved or copied. Exiting..."; puts msg; log.info msg
 end
