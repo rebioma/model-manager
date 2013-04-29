@@ -8,10 +8,8 @@ rails_environment: development
 marine: true
 
 ## Database properties
-# delete_ascii_model_records: deletes existing ascii_models table in db specified in database.yml
-# replace_ascii_db: copies the database table that stores names and html for each model from _mm to _prod (table: asc_model)
+# delete_ascii_model_records: deletes existing ascii_models table (asc_model) in db specified in rails_environment
 delete_ascii_model_records: true
-replace_ascii_db: true
 
 ## Mask and background properties
 # read and write mask to ascii: this is a convenience and can save time if nothing else changes

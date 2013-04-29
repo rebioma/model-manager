@@ -97,16 +97,14 @@ module ModelUtilities
         limit = (prop[1].to_f * props['background_samples'].to_f).round
         limit = 1 if limit == 0 # avoids 0..-1 in following step for proportions == 0
         (0..(limit - 1)).each do
-          #b = Time.now
           occ = mask[rand(mask.size)][1] # Gets the occurrence part of the mask array
           cellid = ModelUtilities.get_cellid(occ.DecimalLatitude, occ.DecimalLongitude, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
           era = prop[0]
           line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.DecimalLongitude, occ.DecimalLatitude, cellid, era, "background")
           redo if nodata == true # if nodata anywhere in line don't write line, don't inc counter, redo random draw
+          line << era # testing
           backfile.puts(line.join(",")) 
-          #c = Time.now
           a += 1
-          #puts a.to_s + ", elapsed: " + (b - c).round(3).to_s + " seconds."
           old_perc = GeneralUtilities.print_progress(a,props['background_samples'],old_perc)
         end
       }
