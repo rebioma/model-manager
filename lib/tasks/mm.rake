@@ -8,7 +8,8 @@ end
 
 desc "copies results to Tomcat:"
 namespace :model_manager do
-  task do
-    ruby "lib/mm_lib/copy_output.rb"
+  task :copy => :environment do
+  	rails = Rails.root.join("config", "environment.rb")
+    ruby "lib/mm_lib/copy_output.rb #{rails}"
   end
 end
