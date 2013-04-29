@@ -5,3 +5,11 @@ namespace :model_manager do
     ruby "lib/mm_lib/main.rb #{rails}"
   end
 end
+
+desc "copies results to Tomcat:
+namespace :model_manager do
+  task do # :main => :environment do
+	#rails = Rails.root.join("config", "environment.rb")
+    ruby "lib/mm_lib/copy_output.rb"
+  end
+end
