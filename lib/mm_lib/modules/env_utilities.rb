@@ -109,8 +109,8 @@ module EnvUtilities
         fixline = []
         c.each do |r|
           if r != "-9999"
-            r = r.to_f.to_s # converts exponential numbers less than e-05
-            r = EnvUtilities.exponential_to_float(r) if r[r.size - 4] == 101  # byte for "e"
+            # much better: 
+            r = "%.4f" % r  #number here determines length of resulting float, here 4 digits
           end
           fixline << r
         end
@@ -123,26 +123,4 @@ module EnvUtilities
     return newname
   end
 
-  # Only works on negative exponential notation!
-  # Also, assumes two digit notation e-06; not e-3!!
-  # Will fail if passed exponential numbers with less than e05, e.g. 1.234e-04
-  def EnvUtilities.exponential_to_float(r)
-    #r = r.to_s
-    #if r[r.size - 3] == 45 # minus sign such as 9.12342e-05
-    str = ["0."]
-    n = ([r[r.size - 1]].pack('c*').to_i) + 10 * ([r[r.size - 2]].pack('c*').to_i)
-    #puts ([r[r.size - 1]].pack('c*').to_i)
-    #puts ([r[r.size - 2]].pack('c*').to_i)
-    #puts n
-    (1..n - 1).each do str << "0" end
-    (0..r.size - 1).each {|t|
-        q = [r[t]].pack('c*')
-        next if q == "."
-        break if q == "e"
-        str << q.to_s
-       }
-    #end
-    r = str.join("")
-    return r
-  end
 end

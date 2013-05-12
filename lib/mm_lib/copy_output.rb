@@ -1,4 +1,7 @@
 # copy output to tomcat with options
+# not working currently - permissions issues on tomcat folders, cannot write, cannot delete, cannot chown
+# except as sudo, and cannot sudo rake
+# one solution might be to run (this and all rake tasks?) as tomcat user, but at moment cannot open ssh session as tomcat
 require ARGV[0] #rails_environment
 require 'logger'
 require 'fileutils'
