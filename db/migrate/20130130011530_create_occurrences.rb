@@ -3,6 +3,6 @@ class CreateOccurrences < ActiveRecord::Migration
     #create_table :occurrences do |t|
 
     #  t.timestamps
-    end
+    #end
   end
 end
