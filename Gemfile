@@ -12,6 +12,8 @@ gem 'zipruby'
 #gem 'activerecord-pg-adapter'
 gem 'pg'
 
+gem 'safe_attributes'
+
 # Gems used only for assets and not required
 # in production environments by default.
 #group :assets do

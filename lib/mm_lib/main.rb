@@ -21,7 +21,7 @@ props = YAML::load(File.open(fn))
 log = Logger.new(props['logs'] + "LOG_" + Time.now.to_s.gsub(" ","_") + ".txt")
 # Set rails env allowing different target databases, e.g. dev || prod
 Rails.env = props['rails_environment']
-GeneralUtilities.puts_log("Set rails environment to " + Rails.env, log)
+GeneralUtilities.puts_log("Set Rails environment to #{Rails.env}", log)
 
 # 
 # STEP 1
@@ -55,15 +55,15 @@ else # create new masks
   case props['mask_run_type'] 
   when 0
     # Regular full mask for production run. note AR doesn't understand alias_attribute
-    mask_names = Occurrence.select("AcceptedSpecies").where(:validated => true).group("AcceptedSpecies")
+    mask_names = Occurrence.select("acceptedspecies").where(:validated => true).group("acceptedspecies")
   when 1
     # To get mask for smaller set (reviewed only - not the normal procedure for mask)
     # Generally only for testing or debugging!
-    mask_names = Occurrence.select("AcceptedSpecies").where(:reviewed => true).group("AcceptedSpecies")
+    mask_names = Occurrence.select("acceptedspecies").where(:reviewed => true).group("acceptedspecies")
   when 2
     # To get mask for very small set
     # Generally only for testing or debugging!
-    mask_names = Occurrence.where("AcceptedSpecies = 'Plagiolepis alluaudi'").group("AcceptedSpecies")
+    mask_names = Occurrence.where("acceptedspecies = 'Plagiolepis alluaudi'").group("acceptedspecies")
   end
   old_perc = 0
   not_found = [] # holds rescue cases
@@ -71,12 +71,12 @@ else # create new masks
   mask_cellid_array = [] # will hold cellid and occ, not destroyed each loop
   mask_names.each_with_index {|m, i|
     begin
-      next if tax_hash[m.AcceptedSpecies][1] == "1" # skip this species if marine, e.g. IsMarine == true
-      mask_raw = Occurrence.where(:validated => true).where("AcceptedSpecies = '#{m.AcceptedSpecies}'")
+      next if tax_hash[m.acceptedspecies][1] == "1" # skip this species if marine, e.g. IsMarine == true
+      mask_raw = Occurrence.where(:validated => true).where("acceptedspecies = '#{m.acceptedspecies}'")
       mask_raw.each {|maskocc| # each valid occurrence
-        lat = maskocc.DecimalLatitude
-        long = maskocc.DecimalLongitude
-        year = maskocc.YearCollected
+        lat = maskocc.decimallatitude
+        long = maskocc.decimallongitude
+        year = maskocc.yearcollected
         cellid = ModelUtilities.get_cellid(lat, long, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
         unless (cellid[1] > props['terr_grid']['nrows'] + props['terr_grid']['headlines'] or cellid[2] > props['terr_grid']['ncols']) # adds this unique value to every occurrence unless out of bounds
           mask_cellid_array << [cellid[0],maskocc]
@@ -85,7 +85,7 @@ else # create new masks
       }
       old_perc = GeneralUtilities.print_progress(i,mask_names.size,old_perc)
     rescue
-      not_found << m.AcceptedSpecies
+      not_found << m.acceptedspecies
       next
     end
   }
@@ -132,14 +132,14 @@ run_type = props['records_run_type']
 case run_type
 when 0
   # Regular full production run
-  names = Occurrence.select("AcceptedSpecies").where(:reviewed => true).group("AcceptedSpecies")
+  names = Occurrence.select("acceptedspecies").where(:reviewed => true).group("acceptedspecies")
 when 1
   # To test one species/group for debugging
-  #names = Occurrence.where(:AcceptedOrder => "Primates").where(:reviewed => true).group("AcceptedSpecies")
-  #names = Occurrence.where(:AcceptedOrder => "Scleractinia").where(:reviewed => true).group("AcceptedSpecies")
-  #names = Occurrence.where(:AcceptedGenus => "Acanthastrea").where(:reviewed => true).group("AcceptedSpecies")
-  names = Occurrence.where(:AcceptedSpecies => "Camponotus concolor").where(:reviewed => true).group("AcceptedSpecies")
-  #names = Occurrence.where(:AcceptedClass => "Anthozoa").group("AcceptedSpecies")
+  names = Occurrence.select("DISTINCT ON (acceptedspecies) * ").where(:acceptedorder => "Primates").where(:reviewed => true).group("id, acceptedspecies")
+  #names = Occurrence.where(:AcceptedOrder => "Scleractinia").where(:reviewed => true).group("acceptedspecies")
+  #names = Occurrence.where(:AcceptedGenus => "Acanthastrea").where(:reviewed => true).group("acceptedspecies")
+  #names = Occurrence.select("DISTINCT ON (acceptedspecies) * ").where(:acceptedspecies => "Camponotus concolor").where(:reviewed => true).group("id, acceptedspecies")
+  #names = Occurrence.where(:AcceptedClass => "Anthozoa").group("acceptedspecies")
 end
 
 names_size = names.to_a.size
@@ -162,9 +162,9 @@ final_spp = []
 old_perc = 0
 names.each_with_index {|species,z|
   # Two queries, first to get positively reviewed public records:
-  occ_raw_public = Occurrence.where(:reviewed => true).where("AcceptedSpecies = '#{species.AcceptedSpecies}'").where(:Public => true)
+  occ_raw_public = Occurrence.where(:reviewed => true).where("acceptedspecies = '#{species.acceptedspecies}'").where(:public => true)
   # Second query to get positively reviewed private records that are "vettable" i.e. modelable
-  occ_raw_private = Occurrence.where(:reviewed => true).where("AcceptedSpecies = '#{species.AcceptedSpecies}'").where(:Public => false).where(:Vettable => true)
+  occ_raw_private = Occurrence.where(:reviewed => true).where("acceptedspecies = '#{species.acceptedspecies}'").where(:public => false).where(:vettable => true)
   # Join the two result set arrays with simple '+', there is no overlap. results in array, not AR relation 
   occ_array = occ_raw_public + occ_raw_private
 
@@ -176,10 +176,10 @@ names.each_with_index {|species,z|
     # first get cellid for each occurrance
     occ_cellid_array = [] # will hold cellid and occ, destroyed each loop
     occ_array.each {|occ|
-      lat = occ.DecimalLatitude
-      long = occ.DecimalLongitude
-      year = occ.YearCollected
-      name = occ.AcceptedSpecies
+      lat = occ.decimallatitude.to_f
+      long = occ.decimallongitude.to_f
+      year = occ.yearcollected.to_i
+      name = occ.acceptedspecies
 
       # Assigns realm based on marine value. By default,
       # a species that is marine and terr will be assigned to marine
@@ -235,7 +235,7 @@ if final_spp.size == 0
 end
 GeneralUtilities.puts_log("Results after removing duplicates:", log)
 for i in (0..final_spp.size - 1) do
-  GeneralUtilities.puts_log(final_spp[i][0][2].AcceptedSpecies + " (" + final_spp[i].size.to_s + ")",log)
+  GeneralUtilities.puts_log(final_spp[i][0][2].acceptedspecies + " (" + final_spp[i].size.to_s + ")",log)
 end
 
 #
@@ -286,13 +286,13 @@ for j in (0..final_spp.size - 1) do #every species
   #       final_spp[j][x] = one record array for one spp [uniq_val,cellid,occ]
   #       final_spp[j][x][2] = one occurrence
   GeneralUtilities.puts_log(GeneralUtilities.dash(100),log)
-  GeneralUtilities.puts_log("Starting model for " + final_spp[j][0][2].AcceptedSpecies.split(" ").join("_"),log)
+  GeneralUtilities.puts_log("Starting model for " + final_spp[j][0][2].acceptedspecies.split(" ").join("_"),log)
   GeneralUtilities.puts_log(GeneralUtilities.dash(100),log)
   # additional setup:
   project_ok = false # looks for at least one successful projection for each species
 
   # One sample swd method for terr, another for marine
-  realm = tax_hash[final_spp[j][0][2].AcceptedSpecies][1] == "1" ? "marine" : "terrestrial"
+  realm = tax_hash[final_spp[j][0][2].acceptedspecies][1] == "1" ? "marine" : "terrestrial"
   # Notes: marine swd with samples is not really needed here becuase this is not used below
   #        given that there is no marine projection (for now)
   #files = realm == "marine" ? ModelUtilities.create_marine_sample_swd(final_spp[j],props) : ModelUtilities.create_sample_swd(final_spp[j],props)
@@ -499,44 +499,7 @@ for j in (0..final_spp.size - 1) do #every species
     GeneralUtilities.puts_log("No valid projections for " + name + "...", log)
   end # at least one validated full model
   GeneralUtilities.puts_log(GeneralUtilities.dash(80), log)
-end #each species
-
-# Optionally change ownership of files created during run
-if props['chown']
-  GeneralUtilities.puts_log("Changing model ownership...", log)
-  Dir.glob(props['trainingdir'] + '**/*').each {|f| File.chown props['owner_uid'], props['owner_uid'], f}
-  Dir.glob(props['outputdir'] + '**/*').each {|e| File.chown props['owner_uid2'], props['owner_uid2'], e}
-end
-
-# Optionally copy output to Models path on tomcat
-if props['move_to_tomcat']
-  if props['delete_old_tomcat']
-    GeneralUtilities.puts_log("Deleting existing models from tomcat directory: " + props['models_path'], log)
-    FileUtils.rm_r props['models_path']
-    FileUtils.mkdir props['models_path']
-  end
-  # Copy files to tomcat, either as links or files
-  # Instead of copying all files, copy directory structure, and symbolic links to files
-  #   enables storage of one copy - note however need to create new outputdir each time
-  #   if for any reason you want to keep old models, and supplement with new ones as opposed
-  #   to regenerating all models every time
-  GeneralUtilities.puts_log("Copying new models to Tomcat...", log)
-  Dir.glob(props['outputdir'] + '**/*').each {|f|
-    if File.directory?(f)
-      FileUtils.mkdir_p(props['models_path'] + f.sub(props['outputdir'],""))
-    else
-      if props['links'] # copy links to files only
-        FileUtils.ln_s(f, props['models_path'] + f.sub(props['outputdir'], ""), :force => true)
-      else # copy full files
-        FileUtils.cp_r props['outputdir'] + '/.', props['models_path']
-      end
-    end
-  }
-
-  # Change ownership (not relevant for links, but ok)
-  Dir.glob(props['models_path'] + '**/*').each {|e| File.chown props['owner_uid2'], props['owner_uid2'], e} if props['chown']
-  GeneralUtilities.puts_log("Changing model ownership...", log) if props['chown']
-end
+end #big model loop for each species
 
 GeneralUtilities.puts_log("Model Manager complete.", log)
 

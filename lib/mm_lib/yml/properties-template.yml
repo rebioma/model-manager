@@ -29,7 +29,6 @@ use_existing_background:
 logs: "/home/tomay/rails/model-manager/lib/mm_lib/log/"
 tmp: "/home/tomay/rails/model-manager/tmp/"
 env_path: "/home/tomay/mm/env_layers/ascii_ipcc4/"
-taxonomic_authority_path: "/home/tomay/mm/taxonomy_edit.csv" # because of encoding issues deleted all extra cols
 link_path: "/home/tomay/mm/env_layers/ascii_links2/"
 trainingdir: "/home/tomay/mm/training/"
 #Final location for output from model_manager; see below for tomcat path
@@ -46,14 +45,14 @@ records_run_type: 0
 ## Post-procesing properties to change ownership and move results
 chown: false
 owner_uid: 1000
-owner_uid2: 1001
+group_uid: 1001
 #final location on tomcat
 models_path: "/home/tomcat/tomcat6/webapps/test/ModelOutput/"
-#if true copy (as symbolic links) files to final location specified above
-move_to_tomcat: false
-links: false
-# if true delete existing models on tomcat. Note: only runs if move_to_tomcat == true 
+# if true delete existing models on tomcat
 delete_old_tomcat: false
+#if true mount output files to models path specified above
+mount_to_tomcat: false
+
 
 ## Modeling properties
 maxent_path: "/home/tomay/mm/maxent/maxent3.3.3e.jar"

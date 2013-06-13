@@ -102,7 +102,7 @@ module GeneralUtilities
           if val == "1"
             #lat-long used in the generation of background. 
             latlong = ModelUtilities.get_latlong(xll, yll, cell, getrow, getcol, nrows, headlines)
-            occ1 = Occurrence.new(:AcceptedSpecies => "mskspp-r" + getrow.to_s + "c" + getcol.to_s, :DecimalLatitude => latlong[0], :DecimalLongitude => latlong[1]) 
+            occ1 = Occurrence.new(:acceptedspecies => "mskspp-r" + getrow.to_s + "c" + getcol.to_s, :decimallatitude => latlong[0], :decimallongitude => latlong[1]) 
             mask << [cellid,occ1]
           end
           cellid += 1

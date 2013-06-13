@@ -98,9 +98,9 @@ module ModelUtilities
         limit = 1 if limit == 0 # avoids 0..-1 in following step for proportions == 0
         (0..(limit - 1)).each do
           occ = mask[rand(mask.size)][1] # Gets the occurrence part of the mask array
-          cellid = ModelUtilities.get_cellid(occ.DecimalLatitude, occ.DecimalLongitude, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
+          cellid = ModelUtilities.get_cellid(occ.decimallatitude, occ.decimallongitude, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
           era = prop[0]
-          line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.DecimalLongitude, occ.DecimalLatitude, cellid, era, "background")
+          line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.decimallongitude, occ.decimallatitude, cellid, era, "background")
           redo if nodata == true # if nodata anywhere in line don't write line, don't inc counter, redo random draw
           line << era # testing
           backfile.puts(line.join(",")) 
@@ -111,8 +111,8 @@ module ModelUtilities
     when true # marine
       (0..(props['background_samples'] - 1)).each_with_index do |n, p|
         occ = mask[rand(mask.size)][1] # Gets the occurrence part of the mask array
-        cellid = ModelUtilities.get_cellid(occ.DecimalLatitude, occ.DecimalLongitude, props['marine_grid']['cell'], props['marine_grid']['xll'], props['marine_grid']['yll'], props['marine_grid']['nrows'], props['marine_grid']['ncols'], props['marine_grid']['headlines'])
-        line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.DecimalLongitude, occ.DecimalLatitude, cellid, nil, "background")
+        cellid = ModelUtilities.get_cellid(occ.decimallatitude, occ.decimallongitude, props['marine_grid']['cell'], props['marine_grid']['xll'], props['marine_grid']['yll'], props['marine_grid']['nrows'], props['marine_grid']['ncols'], props['marine_grid']['headlines'])
+        line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.decimallongitude, occ.decimallatitude, cellid, nil, "background")
         redo if nodata # if nodata anywhere in line don't write line, don't inc counter, redo random draw
         backfile.puts(line.join(",")) 
         old_perc = GeneralUtilities.print_progress(p,props['background_samples'],old_perc)
@@ -152,7 +152,7 @@ module ModelUtilities
     # Setup and open files
     env_layers = layers.split(",")
     occ_array, priv_array, head = [], [], [] # to hold occurrences for csv output, and a counter for private records
-    name = (species[0][2].AcceptedSpecies).split(" ").join("_") # get name from first record
+    name = (species[0][2].acceptedspecies).split(" ").join("_") # get name from first record
 
     head << "name" << "longitude" << "latitude"
     env_layers.each {|layer_name| head << layer_name.sub(".asc","") }
@@ -167,19 +167,19 @@ module ModelUtilities
     for z in (0..species.size - 1) do #every cellid-occurrence array
       cellid = species[z][1]
       occ = species[z][2]
-      if occ.Public == true
+      if occ.public == true
         occ_array << occ #only public records into occ_array
       else
-        occ.EmailVisible ? priv_array << occ.email : priv_array << "email not provided"
+        occ.emailvisible ? priv_array << occ.email : priv_array << "email not provided"
       end
-      era = EnvUtilities.get_era(occ.YearCollected)
-      line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.DecimalLongitude, occ.DecimalLatitude, cellid, era, name)
+      era = EnvUtilities.get_era(occ.yearcollected)
+      line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.decimallongitude, occ.decimallatitude, cellid, era, name)
       next if nodata == true
       afile.puts(line.join(",")) 
       count += 1
     end
     GeneralUtilities.flush_and_close([afile])
-    files = {"name"=> name, "acceptedspecies" => species[0][2].AcceptedSpecies, "swd_file"=> afile, "occ_array" => occ_array, "priv_array" => priv_array, "count" => count}
+    files = {"name"=> name, "acceptedspecies" => species[0][2].acceptedspecies, "swd_file"=> afile, "occ_array" => occ_array, "priv_array" => priv_array, "count" => count}
     return files
   end
 
@@ -233,7 +233,7 @@ module ModelUtilities
       vals = line.gsub("\"","").strip.split(",") 
       if i == 0 # header
         vals.each_with_index{|val, count|
-          accepted_count = count if val == "AcceptedSpecies"
+          accepted_count = count if val == "acceptedspecies"
           marine_count = count if val == "IsMarine"
           terr_count = count if val == "IsTerrestrial"
         }
@@ -257,7 +257,7 @@ module ModelUtilities
     tax_hash = {}
     species = Taxonomy.all
     species.each {|spp|
-      tax_hash[spp.AcceptedSpecies] = [spp.IsTerrestrial.to_i.to_s,spp.IsMarine.to_i.to_s]
+      tax_hash[spp.acceptedspecies] = [spp.isterrestrial.to_i.to_s,spp.ismarine.to_i.to_s]
     }
     return tax_hash
   end

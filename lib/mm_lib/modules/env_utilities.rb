@@ -9,6 +9,7 @@ module EnvUtilities
   end
 
   def EnvUtilities.get_era(year)
+    year = year.to_i
     era = 1 if year < 1970
     era = 2 if (year >= 1970 and year < 1990)
     era = 3 if (year >= 1990 and year < 2000)

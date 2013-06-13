@@ -14,7 +14,7 @@ module CsvWriter2
       col_names.each {|field|
         rec_id = occ.id
         value = occ[field]
-        value = "" if (field == "email" and occ.EmailVisible == false)
+        value = "" if (field == "email" and occ.emailvisible == false)
         #puts "field:" + field
         #puts "value: " + value.to_s
         #puts "----------------------------"
@@ -24,7 +24,7 @@ module CsvWriter2
       review_array = Occurrence.find(rec_id).reviews
       emails = []
       ## review_array.each {|review| emails << review.user.email } ## not working through AR assoc
-      review_array.each {|review| emails << User.find(review.userId).email}
+      review_array.each {|review| emails << User.find(review.userid).email}
       line << emails.join(" | ")
       #puts "line:"
       #puts line.join(",")
