@@ -49,7 +49,7 @@ end
 # Uses mount to "copy" output files to tomcat
 # REQUIRES SUDO and will prompt for pw
 ##
-if props['mout_to_tomcat']
+if props['mount_to_tomcat']
   msg = "Deleting existing models from tomcat directory: " + props['models_path']; puts msg; log.info msg
   cmd = "sudo mount --bind #{props['outputdir']} #{props['models_path']}"
   result = system(cmd)
