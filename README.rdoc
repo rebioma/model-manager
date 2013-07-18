@@ -95,8 +95,7 @@ Another option over SSH with screen
 
 == Utilities
 
-To chown files, delete old output, and "copy" (via mount) output to tomcat, configure options in properties.yml, then run the following:
-From terminal
+To chown files, delete old output, and "copy" (via mount) output to tomcat, configure options in properties.yml, then run the following from terminal:
        $ rake model_manager:copy_output
        
-These commands require sudo and will prompt for pw. Of course these same tasks can also be run from the command line with no need for ruby. 
+These commands require sudo and will prompt for su pw. Of course these same tasks can also be run from the command line with no need for ruby. 
