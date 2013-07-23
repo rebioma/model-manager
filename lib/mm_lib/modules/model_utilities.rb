@@ -19,6 +19,7 @@ module ModelUtilities
 
   # Removes duplicates from an array of any dimension, 
   # based on the uniqueness of the first element
+  # TODO: Why not just use b = a.uniq{|e| e.first} ?? 
   def ModelUtilities.remove_grid_duplicates(in_array)
     keep = 9999
     deldup = []
