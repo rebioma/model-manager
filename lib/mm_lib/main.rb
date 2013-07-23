@@ -74,9 +74,9 @@ else # create new masks
       next if tax_hash[m.acceptedspecies][1] == "1" # skip this species if marine, e.g. IsMarine == true
       mask_raw = Occurrence.where(:validated => true).where("acceptedspecies = '#{m.acceptedspecies}'")
       mask_raw.each {|maskocc| # each valid occurrence
-        lat = maskocc.decimallatitude
-        long = maskocc.decimallongitude
-        year = maskocc.yearcollected
+        lat = maskocc.decimallatitude.to_f
+        long = maskocc.decimallongitude.to_f
+        year = maskocc.yearcollected.to_i
         cellid = ModelUtilities.get_cellid(lat, long, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
         unless (cellid[1] > props['terr_grid']['nrows'] + props['terr_grid']['headlines'] or cellid[2] > props['terr_grid']['ncols']) # adds this unique value to every occurrence unless out of bounds
           mask_cellid_array << [cellid[0],maskocc]
@@ -93,7 +93,9 @@ else # create new masks
   GeneralUtilities.puts_log(not_found.each{|missing| puts missing + " not found in taxonomy"}, log) unless not_found.nil? 
   GeneralUtilities.puts_log("Removing duplicate samples from mask...",log)
   # removes duplicates for mask and years
-  mask = ModelUtilities.remove_grid_duplicates(mask_cellid_array)
+  # old_method: mask = ModelUtilities.remove_grid_duplicates(mask_cellid_array)
+  # new
+  mask = mask_cellid_array.uniq{|elem| elem.first}
   years = ModelUtilities.remove_years_by_cellid(cellids_years)
 end
 
@@ -212,8 +214,9 @@ names.each_with_index {|species,z|
       # marine duplicates are simply those that occur in same cell
       occ_cellid_array << [uniq_val,cellid,occ] unless skip == true 
     }
-    single_sp = ModelUtilities.remove_grid_duplicates(occ_cellid_array)
-    #msg = "..." + i.acceptedspecies + ": " + single_sp_arry.size.to_s + " records after removing duplicates"
+    # old method: single_sp = ModelUtilities.remove_grid_duplicates(occ_cellid_array)
+    # new: 
+    single_sp = occ_cellid_array.uniq{|elem| elem.first}
     final_spp << single_sp if single_sp.size >= props['minrecs'] # looks like [[cellid,occ],[cellid,occ],[cellid,occ]]
   else
     #msg = i.acceptedspecies + ": Not enough records to model (" + occ_array.size.to_s + " records total)"
