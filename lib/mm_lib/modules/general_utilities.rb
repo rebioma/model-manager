@@ -113,12 +113,13 @@ module GeneralUtilities
     return mask
   end
 
-  def GeneralUtilities.write_ascii(mask, ncols, nrows, xll, yll, cellsize, nodata_value, outdir)
+  def GeneralUtilities.write_ascii(mask_in, ncols, nrows, xll, yll, cellsize, nodata_value, outdir)
     # Writes a mask from memory to an ESRI ascii grid
     # mask is a 2D array composed of [[cellid1,[occ1]],[cellid2,[occ2]]]
     # cellid's are assumed to be unique and in rank order, from 1 to n
     # occurrences are not used here
-
+    # new: given previous two statements, now mapping to remove occurrences, then sorting by cellid
+    mask = mask_in.map{|elem| elem.first}.sort
     # writes ascii header
     name = (outdir + "mask " + Time.now.to_s + ".asc").gsub(" ","_")
     mask_asc = File.new(name, "w")
@@ -133,7 +134,7 @@ module GeneralUtilities
     cellid = 1
     asc_array = []
     mask.each {|m|
-      until m[0] == cellid
+      until m == cellid
         asc_array << nodata_value
         cellid += 1
       end
