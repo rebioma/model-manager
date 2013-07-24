@@ -39,6 +39,13 @@ msg = species_count["mar_spp"] > 0 ? " and " + species_count["mar_spp"].to_s + "
 GeneralUtilities.puts_log("Found " + species_count["terr_spp"].to_s + " terrestrial" + msg + " species in TA", log)
 
 #
+# STEP 1b
+# Read environment layers to memory
+##
+GeneralUtilities.puts_log("Reading environmental layers to memory, please wait...", log)
+layer_hash = EnvUtilities.make_layer_hash(props, false)
+
+#
 # STEP 2:
 # Create terrestrial mask array from all validated species
 # This is used for bias masking when creating SWD
@@ -117,7 +124,7 @@ end
 #
 ##
 if props['marine'] == true
-  GeneralUtilities.puts_log("Reading marine mask from ascii",log)
+  GeneralUtilities.puts_log("Reading marine mask from ascii...",log)
   marine_mask = GeneralUtilities.read_ascii(props['marine_mask'], props['marine_grid']['headlines'], props['marine_grid']['nrows'], props['marine_grid']['xll'], props['marine_grid']['yll'], props['marine_grid']['cell'])
   GeneralUtilities.puts_log("Marine mask finished. Number of cells in mask: " + marine_mask.size.to_s,log)
 end
@@ -195,13 +202,14 @@ names.each_with_index {|species,z|
         # clim_era = year < 1975 ? 1950 : 2000 # assigns clim_era to 1950 for recs < 1975; 2000 for the rest
         # note: new worldclim no longer includes 1950, so no distinction here, no longer use "clim_era"
         for_era = EnvUtilities.get_forest_era(year, props)
-        for_val = EnvUtilities.get_value(for_era, props, cellid[1], cellid[2])
+        #for_val = EnvUtilities.get_value(for_era, props, cellid[1], cellid[2])
+        for_val = layer_hash[for_era][cellid[0] - 1]
         if for_val.nil?
           GeneralUtilities.puts_log("nil forest value for " + name + "(lat: " + lat.to_s + ", long: " + long.to_s + ")",log)  
           skip = true
         else 
           #uniq_val = cellid[0].to_s + "_&_" + clim_era.to_s + "_&_" + for_val.to_s # defines a uniq val by cellid, clim_era and forest value for deleting duplicates
-          uniq_val = cellid[0].to_s + "_&_" + for_val.to_s # NEW defines a uniq val by cellid, and forest value for deleting duplicates
+          uniq_val = cellid[0].to_s + "_" + for_val.to_s # NEW defines a uniq val by cellid, and forest value for deleting duplicates
         end  
         # i[1] shows terr, marine; i[1] = [0,1] > mar; [1,1] > terr, mar; [1,0] > terr
       when "marine"
@@ -249,11 +257,11 @@ end
 if props['use_existing_background']['value'] == false # create new background
   msg = props['marine'] == true ? "terrestrial and marine" : "terrestrial" 
   GeneralUtilities.puts_log("Creating background SWDs for " + msg + " scenarios...", log)
-  terr_backfile = ModelUtilities.create_background_swd(years, mask, props, props['env_layers'], props['trainingdir'] + "background_terr.swd", false)
+  terr_backfile = ModelUtilities.create_background_swd(years, mask, props, props['env_layers'], layer_hash, props['trainingdir'] + "background_terr.swd", false)
   mar_backfile = true # allows to continue with no marine models 
   if props['marine'] == true
     GeneralUtilities.puts_log("\nMarine background...",log)
-    mar_backfile = ModelUtilities.create_background_swd(nil, marine_mask, props, props['marine_layers'], props['trainingdir'] + "background_marine.swd", true)
+    mar_backfile = ModelUtilities.create_background_swd(nil, marine_mask, props, props['marine_layers'], layer_hash, props['trainingdir'] + "background_marine.swd", true)
   end
   if (terr_backfile and mar_backfile)
     GeneralUtilities.puts_log("\nBackground SWDs ok: true",log)
@@ -301,9 +309,9 @@ for j in (0..final_spp.size - 1) do #every species
   #files = realm == "marine" ? ModelUtilities.create_marine_sample_swd(final_spp[j],props) : ModelUtilities.create_sample_swd(final_spp[j],props)
   case realm
   when "terrestrial"
-    files = ModelUtilities.create_sample_swd(final_spp[j],props,props['env_layers'],false)
+    files = ModelUtilities.create_sample_swd(final_spp[j],props,props['env_layers'],layer_hash,false)
   when "marine"
-    files = ModelUtilities.create_sample_swd(final_spp[j],props,props['marine_layers'],true)  
+    files = ModelUtilities.create_sample_swd(final_spp[j],props,props['marine_layers'],layer_hash,true)  
   end 
   name = files["name"]
   final_count = files["count"]

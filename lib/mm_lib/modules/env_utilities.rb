@@ -8,6 +8,21 @@ module EnvUtilities
     return b
   end
 
+  def EnvUtilities.make_layer_hash(props, marine)
+    layer_hash = {}
+    env_layers = []
+    marine_layers = []
+    forest_layers = []
+    # load layers to memory. be patient
+    props['env_layers'].split(",").each{|layer| layer_hash[layer] = EnvUtilities.load_layer(props['env_path'] + layer.sub(".asc","_2000.asc"))}
+    layer_hash[props['for_era_layers'][1950]] = EnvUtilities.load_layer(props['env_path'] + props['for_era_layers'][1950])
+    layer_hash[props['for_era_layers'][1970]] = EnvUtilities.load_layer(props['env_path'] + props['for_era_layers'][1970])
+    layer_hash[props['for_era_layers'][1990]] = EnvUtilities.load_layer(props['env_path'] + props['for_era_layers'][1990])
+    layer_hash[props['for_era_layers'][2000]] = EnvUtilities.load_layer(props['env_path'] + props['for_era_layers'][2000])
+    props['marine_layers'].split(",").each{|layer| layer_hash[layer] = EnvUtilities.load_layer(props['env_path'] + layer)} if marine
+    return layer_hash
+  end
+
   def EnvUtilities.get_era(year)
     year = year.to_i
     era = 1 if year < 1970

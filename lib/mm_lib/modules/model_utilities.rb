@@ -78,7 +78,7 @@ module ModelUtilities
   #
   # Create  background swd for marine or terrestrial scenarios
   # 
-  def ModelUtilities.create_background_swd(years, mask, props, layers, filename, marine)
+  def ModelUtilities.create_background_swd(years, mask, props, layers, layer_hash, filename, marine)
     env_layers = layers.split(",")
     backfile = File.new(filename, "w")
     head = []
@@ -99,11 +99,12 @@ module ModelUtilities
         limit = 1 if limit == 0 # avoids 0..-1 in following step for proportions == 0
         (0..(limit - 1)).each do
           occ = mask[rand(mask.size)][1] # Gets the occurrence part of the mask array
-          cellid = ModelUtilities.get_cellid(occ.decimallatitude, occ.decimallongitude, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
+          cellid = ModelUtilities.get_cellid(occ.decimallatitude.to_f, occ.decimallongitude.to_f, props['terr_grid']['cell'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['nrows'], props['terr_grid']['ncols'], props['terr_grid']['headlines'])
           era = prop[0]
-          line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.decimallongitude, occ.decimallatitude, cellid, era, "background")
+          #line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.decimallongitude.to_f, occ.decimallatitude.to_f, cellid, era, "background")
+          line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, layer_hash, occ.decimallongitude.to_f, occ.decimallatitude.to_f, cellid, era, "background")
           redo if nodata == true # if nodata anywhere in line don't write line, don't inc counter, redo random draw
-          line << era # testing
+          #line << era # testing
           backfile.puts(line.join(",")) 
           a += 1
           old_perc = GeneralUtilities.print_progress(a,props['background_samples'],old_perc)
@@ -124,7 +125,7 @@ module ModelUtilities
   end
 
   # method to construct one line of background and lookup env values for terr and marine spp
-  def ModelUtilities.get_swd_line(layers, marine, props, long, lat, cellid, era, name)
+  def ModelUtilities.get_swd_line_old(layers, marine, props, long, lat, cellid, era, name)
     line = []
     line << name << long << lat
     # lookup clim values
@@ -143,13 +144,35 @@ module ModelUtilities
     return [line, nodata]    
   end
 
+  # method to construct one line of background and lookup env values for terr and marine spp
+  def ModelUtilities.get_swd_line(layers, marine, props, layer_hash, long, lat, cellid, era, name)
+    line = []
+    line << name << long << lat
+    # lookup clim values
+    nodata = false
+    layers.each {|layer|
+      #ourlayer = marine ? layer : layer.sub(".asc","_2000.asc")
+      aval1 = layer_hash[layer][cellid[0] - 1] # TO DO: check if need to subt 1 to get array index YES
+      aval = sprintf( "%0.07f", aval1)
+      line << aval # Note: aval is returned as string with 7 decimal places
+      nodata = true if (aval.to_i == -9999 or aval == nil)
+    }
+    if marine == false
+      for_layer = EnvUtilities.get_forest_ascii(era, props)
+      fval1 = layer_hash[for_layer][cellid[0] - 1] # minus one to match cellid to array index
+      fval = sprintf( "%0.07f", fval1)
+      line << fval
+    end
+    return [line, nodata]    
+  end
+
   ##
   # Creates sample SWD from an array of occurrences for one marine species: (species)
   # species[n] is one occurrence array, consisting of n=[uniq_val,[cellid_array],occ]
   # species[n][1] is the cellid, for looking up env vals; cellid is an array of [cellid, getrow, getcol]
   # species[n][2] is the occurrence itself
   # THIS ONE INCLUDES ENV VALUES NEEDED FOR SWD FOR PROJECTION
-  def ModelUtilities.create_sample_swd(species, props, layers, marine)
+  def ModelUtilities.create_sample_swd(species, props, layers, layers_hash, marine)
     # Setup and open files
     env_layers = layers.split(",")
     occ_array, priv_array, head = [], [], [] # to hold occurrences for csv output, and a counter for private records
@@ -174,7 +197,7 @@ module ModelUtilities
         occ.emailvisible ? priv_array << occ.email : priv_array << "email not provided"
       end
       era = EnvUtilities.get_era(occ.yearcollected)
-      line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.decimallongitude, occ.decimallatitude, cellid, era, name)
+      line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, layers_hash, occ.decimallongitude, occ.decimallatitude, cellid, era, name)
       next if nodata == true
       afile.puts(line.join(",")) 
       count += 1
