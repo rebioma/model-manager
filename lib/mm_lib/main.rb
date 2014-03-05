@@ -57,7 +57,7 @@ if props['use_existing_mask']['value'] == true # use saved mask
   mask = GeneralUtilities.read_ascii(props['mask_path'] + props['use_existing_mask']['mask_file'], props['terr_grid']['headlines'], props['terr_grid']['nrows'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['cell'])
   years = GeneralUtilities.read_years(props['mask_path'] + props['use_existing_mask']['years_file'])
 else # create new masks
-  GeneralUtilities.puts_log("Creating new terrestrial mask from valid records...", log)
+  GeneralUtilities.puts_log("Creating new terrestrial mask from all valid records...", log)
   # regular full run... 
   case props['mask_run_type'] 
   when 0
