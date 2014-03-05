@@ -150,18 +150,22 @@ module ModelUtilities
     line << name << long << lat
     # lookup clim values
     nodata = false
-    layers.each {|layer|
-      #ourlayer = marine ? layer : layer.sub(".asc","_2000.asc")
-      aval1 = layer_hash[layer][cellid[0] - 1] # TO DO: check if need to subt 1 to get array index YES
-      aval = sprintf( "%0.07f", aval1)
-      line << aval # Note: aval is returned as string with 7 decimal places
-      nodata = true if (aval.to_i == -9999 or aval == nil)
-    }
-    if marine == false
-      for_layer = EnvUtilities.get_forest_ascii(era, props)
-      fval1 = layer_hash[for_layer][cellid[0] - 1] # minus one to match cellid to array index
-      fval = sprintf( "%0.07f", fval1)
-      line << fval
+    begin
+      layers.each {|layer|
+        aval1 = layer_hash[layer][cellid[0] - 1] # TO DO: check if need to subt 1 to get array index YES
+        aval = sprintf( "%0.07f", aval1)
+        line << aval # Note: aval is returned as string with 7 decimal places
+        nodata = true if (aval.to_i == -9999 or aval.nil?)
+      }
+      if marine == false
+        for_layer = EnvUtilities.get_forest_ascii(era, props)
+        fval1 = layer_hash[for_layer][cellid[0] - 1] # minus one to match cellid to array index
+        fval = sprintf( "%0.07f", fval1)
+        line << fval
+        nodata = true if (fval.to_i == -9999 or fval.nil?)
+      end
+    rescue
+      nodata = true
     end
     return [line, nodata]    
   end
