@@ -17,9 +17,9 @@ module ModelUtilities
     return final
   end
 
-  # Removes duplicates from an array of any dimension, 
+  # Removes duplicates from an array of any dimension,
   # based on the uniqueness of the first element
-  # TODO: Why not just use b = a.uniq{|e| e.first} ?? 
+  # TODO: Why not just use b = a.uniq{|e| e.first} ??
   def ModelUtilities.remove_grid_duplicates(in_array)
     keep = 9999
     deldup = []
@@ -77,7 +77,7 @@ module ModelUtilities
 
   #
   # Create  background swd for marine or terrestrial scenarios
-  # 
+  #
   def ModelUtilities.create_background_swd(years, mask, props, layers, layer_hash, filename, marine)
     env_layers = layers.split(",")
     backfile = File.new(filename, "w")
@@ -105,7 +105,7 @@ module ModelUtilities
           line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, layer_hash, occ.decimallongitude.to_f, occ.decimallatitude.to_f, cellid, era, "background")
           redo if nodata == true # if nodata anywhere in line don't write line, don't inc counter, redo random draw
           #line << era # testing
-          backfile.puts(line.join(",")) 
+          backfile.puts(line.join(","))
           a += 1
           old_perc = GeneralUtilities.print_progress(a,props['background_samples'],old_perc)
         end
@@ -114,9 +114,9 @@ module ModelUtilities
       (0..(props['background_samples'] - 1)).each_with_index do |n, p|
         occ = mask[rand(mask.size)][1] # Gets the occurrence part of the mask array
         cellid = ModelUtilities.get_cellid(occ.decimallatitude, occ.decimallongitude, props['marine_grid']['cell'], props['marine_grid']['xll'], props['marine_grid']['yll'], props['marine_grid']['nrows'], props['marine_grid']['ncols'], props['marine_grid']['headlines'])
-        line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, occ.decimallongitude, occ.decimallatitude, cellid, nil, "background")
+        line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, layer_hash, occ.decimallongitude, occ.decimallatitude, cellid, nil, "background")
         redo if nodata # if nodata anywhere in line don't write line, don't inc counter, redo random draw
-        backfile.puts(line.join(",")) 
+        backfile.puts(line.join(","))
         old_perc = GeneralUtilities.print_progress(p,props['background_samples'],old_perc)
       end
     end
@@ -141,7 +141,7 @@ module ModelUtilities
       fval = EnvUtilities.get_value(for_layer, props, cellid[1], cellid[2])
       line << fval
     end
-    return [line, nodata]    
+    return [line, nodata]
   end
 
   # method to construct one line of background and lookup env values for terr and marine spp
@@ -167,7 +167,7 @@ module ModelUtilities
     rescue
       nodata = true
     end
-    return [line, nodata]    
+    return [line, nodata]
   end
 
   ##
@@ -185,7 +185,7 @@ module ModelUtilities
     head << "name" << "longitude" << "latitude"
     env_layers.each {|layer_name| head << layer_name.sub(".asc","") }
     head << "pfc" if marine == false
-    
+
     fileid = marine ? "_marine_swd.csv" : "_swd.csv"
     afile = File.new(props['trainingdir'] + name + fileid, "w") # No forest scenario
     afile.puts(head.join(","))
@@ -203,7 +203,7 @@ module ModelUtilities
       era = EnvUtilities.get_era(occ.yearcollected)
       line, nodata = ModelUtilities.get_swd_line(env_layers, marine, props, layers_hash, occ.decimallongitude, occ.decimallatitude, cellid, era, name)
       next if nodata == true
-      afile.puts(line.join(",")) 
+      afile.puts(line.join(","))
       count += 1
     end
     GeneralUtilities.flush_and_close([afile])
@@ -258,7 +258,7 @@ module ModelUtilities
     taxonomic_authority.each_with_index{|line,i|
       #line.encode!('UTF-8', 'UTF-8') # deals with most invalid UTF-8 characters
       line = line.unpack('C*').pack('U*') if !line.valid_encoding? # deals with additional exceptions
-      vals = line.gsub("\"","").strip.split(",") 
+      vals = line.gsub("\"","").strip.split(",")
       if i == 0 # header
         vals.each_with_index{|val, count|
           accepted_count = count if val == "acceptedspecies"
@@ -278,7 +278,7 @@ module ModelUtilities
       a = row[:acceptedspecies]; b = row[:isterrestrial]; c = row[:ismarine]
       tax_hash[a] = [b, c]
     end
-    return tax_hash  
+    return tax_hash
   end
 
   def ModelUtilities.make_taxonomy_hash_from_table()

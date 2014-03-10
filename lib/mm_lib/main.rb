@@ -23,20 +23,20 @@ log = Logger.new(props['logs'] + "LOG_" + Time.now.to_s.gsub(" ","_") + ".txt")
 Rails.env = props['rails_environment']
 GeneralUtilities.puts_log("Set Rails environment to #{Rails.env}", log)
 
-# 
+#
 # STEP 1
 # Read taxonomic authority
 ##
 #tax_hash = ModelUtilities.make_taxonomy_hash(props['taxonomic_authority_path'])
 tax_hash = ModelUtilities.make_taxonomy_hash_from_table()
-GeneralUtilities.puts_log("Reading taxonomic authority. Total species in TA: " + tax_hash.size.to_s, log)
+GeneralUtilities.puts_log("Reading taxonomic authority. Total species in TA: #{tax_hash.size.to_s}", log)
 species_count = GeneralUtilities.count_species(tax_hash)
 if (species_count["mar_spp"] == 0 and props['marine'] == true)
   msg = "No marine species found in taxonomic authority. Check configuration. Program will exit..."
   abort(msg); log.error msg
 end
-msg = species_count["mar_spp"] > 0 ? " and " + species_count["mar_spp"].to_s + " marine" : ""
-GeneralUtilities.puts_log("Found " + species_count["terr_spp"].to_s + " terrestrial" + msg + " species in TA", log)
+msg = species_count["mar_spp"] > 0 ? "and #{species_count["mar_spp"]} marine" : ""
+GeneralUtilities.puts_log("Found #{species_count["terr_spp"]} terrestrial #{msg} species in TA", log)
 
 #
 # STEP 1b
@@ -58,8 +58,8 @@ if props['use_existing_mask']['value'] == true # use saved mask
   years = GeneralUtilities.read_years(props['mask_path'] + props['use_existing_mask']['years_file'])
 else # create new masks
   GeneralUtilities.puts_log("Creating new terrestrial mask from all valid records...", log)
-  # regular full run... 
-  case props['mask_run_type'] 
+  # regular full run...
+  case props['mask_run_type']
   when 0
     # Regular full mask for production run. note AR doesn't understand alias_attribute
     mask_names = Occurrence.select("acceptedspecies").where(:validated => true).group("acceptedspecies")
@@ -97,7 +97,7 @@ else # create new masks
     end
   }
   GeneralUtilities.puts_log("\n",log)
-  GeneralUtilities.puts_log(not_found.each{|missing| puts missing + " not found in taxonomy"}, log) unless not_found.nil? 
+  GeneralUtilities.puts_log(not_found.each{|missing| puts missing + " not found in taxonomy"}, log) unless not_found.nil?
   GeneralUtilities.puts_log("Removing duplicate samples from mask...",log)
   # removes duplicates for mask and years
   # old_method: mask = ModelUtilities.remove_grid_duplicates(mask_cellid_array)
@@ -106,15 +106,15 @@ else # create new masks
   years = ModelUtilities.remove_years_by_cellid(cellids_years)
 end
 
-GeneralUtilities.puts_log("Terrestrial mask finished. Number of sampled cells: " + mask.size.to_s, log)
-GeneralUtilities.puts_log("Total number of unique era-location records (from years array): " + years.size.to_s, log)
+GeneralUtilities.puts_log("Terrestrial mask finished. Number of sampled cells: #{mask.size.to_s}", log)
+GeneralUtilities.puts_log("Total number of unique era-location records (from years array): #{years.size}", log)
 
 if props['mask_write'] == true
   GeneralUtilities.puts_log("Writing mask to ascii and years to csv for later use...", log)
   maskasc = GeneralUtilities.write_ascii(mask, props['terr_grid']['ncols'], props['terr_grid']['nrows'], props['terr_grid']['xll'], props['terr_grid']['yll'], props['terr_grid']['cell'], "-9999", props['mask_path'])
-  GeneralUtilities.puts_log("Mask .asc: " + maskasc, log)
+  GeneralUtilities.puts_log("Mask .asc: #{maskasc}", log)
   yearsasc = GeneralUtilities.write_years(years, props['mask_path'])
-  GeneralUtilities.puts_log("Years .csv: " + yearsasc,log)
+  GeneralUtilities.puts_log("Years .csv: #{yearsasc}",log)
 end
 
 #
@@ -126,7 +126,7 @@ end
 if props['marine'] == true
   GeneralUtilities.puts_log("Reading marine mask from ascii...",log)
   marine_mask = GeneralUtilities.read_ascii(props['marine_mask'], props['marine_grid']['headlines'], props['marine_grid']['nrows'], props['marine_grid']['xll'], props['marine_grid']['yll'], props['marine_grid']['cell'])
-  GeneralUtilities.puts_log("Marine mask finished. Number of cells in mask: " + marine_mask.size.to_s,log)
+  GeneralUtilities.puts_log("Marine mask finished. Number of cells in mask: #{marine_mask.size}",log)
 end
 
 #
@@ -156,17 +156,17 @@ GeneralUtilities.puts_log("Found " + names_size.to_s + " species with positively
 
 #
 # STEP 3.5
-# TO DO: For now, if a species is marine then cannot be terr; 
+# TO DO: For now, if a species is marine then cannot be terr;
 #        this can be dealt with later, but will require using a mask to define realm
 #        by occurrence location, rather than by acceptedspecies, as we are doing now
 
 #
 # STEP 4:
 # Query for each species in the list of names built above
-# 
+#
 ##
 msg = (props['marine'] == true ? "and marine " : "")
-GeneralUtilities.puts_log("Removing duplicate records for terrestrial " + msg + "species...",log)
+GeneralUtilities.puts_log("Removing duplicate records for terrestrial #{msg} species...",log)
 final_spp = []
 old_perc = 0
 names.each_with_index {|species,z|
@@ -174,7 +174,7 @@ names.each_with_index {|species,z|
   occ_raw_public = Occurrence.where(:reviewed => true).where("acceptedspecies = '#{species.acceptedspecies}'").where(:public => true)
   # Second query to get positively reviewed private records that are "vettable" i.e. modelable
   occ_raw_private = Occurrence.where(:reviewed => true).where("acceptedspecies = '#{species.acceptedspecies}'").where(:public => false).where(:vettable => true)
-  # Join the two result set arrays with simple '+', there is no overlap. results in array, not AR relation 
+  # Join the two result set arrays with simple '+', there is no overlap. results in array, not AR relation
   occ_array = occ_raw_public + occ_raw_private
 
   # Remove duplicates by grid cell
@@ -194,7 +194,7 @@ names.each_with_index {|species,z|
       # a species that is marine and terr will be assigned to marine
       # also, a species with no assignment in TA will be assigned terr
       realm = tax_hash[name][1] == "1" ? "marine" : "terrestrial"
-      
+
       case realm
       when "terrestrial"
         skip = false
@@ -205,12 +205,12 @@ names.each_with_index {|species,z|
         #for_val = EnvUtilities.get_value(for_era, props, cellid[1], cellid[2])
         for_val = layer_hash[for_era][cellid[0] - 1]
         if for_val.nil?
-          GeneralUtilities.puts_log("nil forest value for " + name + "(lat: " + lat.to_s + ", long: " + long.to_s + ")",log)  
+          GeneralUtilities.puts_log("nil forest value for " + name + "(lat: " + lat.to_s + ", long: " + long.to_s + ")",log)
           skip = true
-        else 
+        else
           #uniq_val = cellid[0].to_s + "_&_" + clim_era.to_s + "_&_" + for_val.to_s # defines a uniq val by cellid, clim_era and forest value for deleting duplicates
           uniq_val = cellid[0].to_s + "_" + for_val.to_s # NEW defines a uniq val by cellid, and forest value for deleting duplicates
-        end  
+        end
         # i[1] shows terr, marine; i[1] = [0,1] > mar; [1,1] > terr, mar; [1,0] > terr
       when "marine"
         next if props['marine'] == false # skip this spp if no marine run
@@ -220,10 +220,10 @@ names.each_with_index {|species,z|
       # Adds this unique value to every occurrence. This will be used to find and delete duplicates
       # terr dupes by definition depend on forest cover value AND location
       # marine duplicates are simply those that occur in same cell
-      occ_cellid_array << [uniq_val,cellid,occ] unless skip == true 
+      occ_cellid_array << [uniq_val,cellid,occ] unless skip == true
     }
     # old method: single_sp = ModelUtilities.remove_grid_duplicates(occ_cellid_array)
-    # new: 
+    # new:
     single_sp = occ_cellid_array.uniq{|elem| elem.first}
     final_spp << single_sp if single_sp.size >= props['minrecs'] # looks like [[cellid,occ],[cellid,occ],[cellid,occ]]
   else
@@ -252,15 +252,16 @@ end
 #
 # STEP 6:
 # Create one terr and one marine background SWD for use in all MaxEnt runs in this session
-# 
+#
 ##
 if props['use_existing_background']['value'] == false # create new background
-  msg = props['marine'] == true ? "terrestrial and marine" : "terrestrial" 
+  msg = props['marine'] == true ? "terrestrial and marine" : "terrestrial"
   GeneralUtilities.puts_log("Creating background SWDs for " + msg + " scenarios...", log)
   terr_backfile = ModelUtilities.create_background_swd(years, mask, props, props['env_layers'], layer_hash, props['trainingdir'] + "background_terr.swd", false)
-  mar_backfile = true # allows to continue with no marine models 
+  mar_backfile = true # allows to continue with no marine models
+  GeneralUtilities.puts_log("\nCreate terrestrial background...",log)
   if props['marine'] == true
-    GeneralUtilities.puts_log("\nMarine background...",log)
+    GeneralUtilities.puts_log("\nCreate marine background...",log)
     mar_backfile = ModelUtilities.create_background_swd(nil, marine_mask, props, props['marine_layers'], layer_hash, props['trainingdir'] + "background_marine.swd", true)
   end
   if (terr_backfile and mar_backfile)
@@ -311,8 +312,8 @@ for j in (0..final_spp.size - 1) do #every species
   when "terrestrial"
     files = ModelUtilities.create_sample_swd(final_spp[j],props,props['env_layers'],layer_hash,false)
   when "marine"
-    files = ModelUtilities.create_sample_swd(final_spp[j],props,props['marine_layers'],layer_hash,true)  
-  end 
+    files = ModelUtilities.create_sample_swd(final_spp[j],props,props['marine_layers'],layer_hash,true)
+  end
   name = files["name"]
   final_count = files["count"]
   GeneralUtilities.puts_log("Number of records start: " + final_spp[j].size.to_s, log)
@@ -421,7 +422,7 @@ for j in (0..final_spp.size - 1) do #every species
   marine_scenario = marine_model == true ? ["marine"] : nil # only one single marine projection (for now)
   [terrestrial_scenarios, marine_scenario].each_with_index {|scenarios, i| # will skip this loop if no models
     case i
-    when 0 
+    when 0
       scenario_type = props['scen_name1']
       density = "density.Project"
       lambda = props['trainingdir'] + name + "_" + scenario_type + "_full" + File::SEPARATOR + name + ".lambdas"
