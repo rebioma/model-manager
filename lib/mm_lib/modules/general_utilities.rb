@@ -1,6 +1,3 @@
-# To change this template, choose Tools | Templates
-# and open the template in the editor.
-
 module GeneralUtilities
   def GeneralUtilities.puts_log(msg, log)
     puts msg
@@ -100,9 +97,9 @@ module GeneralUtilities
         vals = line.split(" ")
         vals.each_with_index {|val, getcol|
           if val == "1"
-            #lat-long used in the generation of background. 
+            #lat-long used in the generation of background.
             latlong = ModelUtilities.get_latlong(xll, yll, cell, getrow, getcol, nrows, headlines)
-            occ1 = Occurrence.new(:acceptedspecies => "mskspp-r" + getrow.to_s + "c" + getcol.to_s, :decimallatitude => latlong[0], :decimallongitude => latlong[1]) 
+            occ1 = Occurrence.new(:acceptedspecies => "mskspp-r" + getrow.to_s + "c" + getcol.to_s, :decimallatitude => latlong[0], :decimallongitude => latlong[1])
             mask << [cellid,occ1]
           end
           cellid += 1
@@ -131,20 +128,39 @@ module GeneralUtilities
     mask_asc.puts("NODATA_value  " + nodata_value.to_s)
 
     # makes a new array with the values to be written to ascii
-    cellid = 1
+    j = 0
+  cellid = 1
+  # array with the values to be written to ascii for each line
+  row = []
     asc_array = []
     mask.each {|m|
       until m == cellid
-        asc_array << nodata_value
+    row << nodata_value
+        #asc_array << nodata_value
         cellid += 1
+
+    j += 1
+    if j == ncols
+      mask_asc.puts(row.join(" "))
+      j = 0
+      row = []
+    end
       end
-      asc_array << 1
+      #asc_array << 1
+    row << 1
       cellid += 1
+    j += 1
+
       next
     }
 
+
+  asc_array = row
+
     # Adds final nodata after last m
-    (1..((nrows * ncols) - asc_array.size)).each {asc_array << nodata_value} if ((nrows * ncols) - asc_array.size) > 0
+    #(1..((nrows * ncols) - asc_array.size)).each {asc_array << nodata_value} if ((nrows * ncols) - asc_array.size) > 0
+  # We have to use cellid intead of asc_array.size
+  (1..((nrows * ncols) - cellid)).each {asc_array << nodata_value} if ((nrows * ncols) - cellid) > 0
 
     # Writes lines to ascii file
     i = 0
